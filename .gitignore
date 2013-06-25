@@ -1,0 +1,14 @@
+# General
+/bin
+*.swp
+
+# Grails files
+UrlMappings.groovy
+/target
+/web-app
+
+# STS / Eclipse Files
+.classpath
+.project
+.settings
+/target-eclipse
