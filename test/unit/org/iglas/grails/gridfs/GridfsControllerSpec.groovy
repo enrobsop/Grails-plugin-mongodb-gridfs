@@ -150,6 +150,7 @@ class GridfsControllerSpec extends UnitSpec {
 			def theId = "anId"
 			def paramId = "123"
 			def uploadCommand = new UploadFileCommand(
+				gridfsService:		gridfsService,
 				id:					paramId,
 				idparent: 			theId,
 				file:				multipartFile
@@ -182,6 +183,7 @@ class GridfsControllerSpec extends UnitSpec {
 			multipartFile.getSize() >> 1024000
 		and: "a command object"
 			def uploadCommand = new UploadFileCommand(
+				gridfsService:		gridfsService,
 				idparent: 			"testUser",
 				file:				multipartFile,
 				successController: 	"mySuccessController",

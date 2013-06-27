@@ -37,7 +37,7 @@ class GridfsController {
 		
 		String newFileName = command.targetFilename 
 
-        if(!gridfsService.exists(config, newFileName)){
+        if(!command.targetFileExists()){
 			
             def gfsFile		= gridfsService.addToGridFS(config,file, newFileName.toLowerCase().replaceAll(/ /,""), params) 
 			def checkUpload	= gridfsService.attemptUpload(config, gfsFile)
@@ -141,7 +141,8 @@ class GridfsController {
 
 	private def failBecauseIdParentMissing(command) {
 		def config = command.config
-		failIf(config, messageSource.getMessage("mongodb-gridfs.paramsbad", [command.idparent] as Object[], "Invalid params", request.locale)) {
+		failIf(config, 
+			messageSource.getMessage("mongodb-gridfs.paramsbad", [command.idparent] as Object[], "Invalid params", request.locale)) {
 			!command.idparent
 		}
 	}

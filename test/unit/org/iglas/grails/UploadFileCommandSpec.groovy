@@ -3,10 +3,12 @@ import grails.plugin.spock.UnitSpec
 import grails.test.mixin.*
 import grails.test.mixin.web.ControllerUnitTestMixin
 
+import org.iglas.grails.gridfs.GridfsService
 import org.iglas.grails.gridfs.UploadFileCommand
 import org.springframework.web.multipart.MultipartFile
 
 import spock.lang.Ignore
+import spock.lang.Shared
 import spock.lang.Unroll
 
 //
@@ -16,8 +18,11 @@ import spock.lang.Unroll
 @TestMixin(ControllerUnitTestMixin)
 class UploadFileCommandSpec extends UnitSpec {
 	
+	@Shared def gridfsService
+	
 	def setup() {
 //		mockCommandObject UploadFileCommand  // See bug info above
+		gridfsService = Mock(GridfsService)
 	}
 
 	@Unroll
@@ -137,6 +142,33 @@ class UploadFileCommandSpec extends UnitSpec {
 			metadata.keySet().contains("parentclass")	== false
 			metadata.keySet().contains("text")			== false
 
+	}
+
+	@Unroll	
+	def "should be able to check if target file exists=#expectedResult"() {
+		
+		given: "an uploaded file"
+			def multipartFile = Mock(MultipartFile)
+			multipartFile.getOriginalFilename() >> "myFile.jpg"
+		and: "a command object"
+			def myConfig = []
+			def uploadCommand = new UploadFileCommand(
+				idparent:		"myId",
+				file:			multipartFile,
+				gridfsService:	gridfsService,
+				config:			myConfig
+			)
+			
+		when: "checking whether a target file exists"
+			def result = uploadCommand.targetFileExists()
+		
+		then: "the check is correctly delegated"
+			1 * gridfsService.exists(myConfig, uploadCommand.targetFilename) >> expectedResult
+		and: "the correct result is returned"
+			result == expectedResult
+		
+		where:
+			expectedResult << [true, false]
 	}
 
 }

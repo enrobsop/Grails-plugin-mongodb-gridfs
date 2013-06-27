@@ -11,6 +11,7 @@ import com.mongodb.DBObject
 class UploadFileCommand {
 
 	transient def config
+	transient def gridfsService
 	
 	String 			idparent
 	MultipartFile	file
@@ -69,6 +70,10 @@ class UploadFileCommand {
 		
 		return metadata
 		
+	}
+	
+	def targetFileExists() {
+		gridfsService.exists(config, targetFilename)
 	}
 	
 }
