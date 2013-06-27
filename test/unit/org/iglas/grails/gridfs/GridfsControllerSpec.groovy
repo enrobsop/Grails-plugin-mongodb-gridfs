@@ -8,7 +8,6 @@ import org.iglas.grails.utils.ConfigHelper
 import org.springframework.mock.web.MockMultipartFile
 import org.springframework.web.multipart.MultipartFile
 
-import spock.lang.IgnoreRest
 import spock.lang.Shared
 import spock.lang.Unroll
 
@@ -162,7 +161,6 @@ class GridfsControllerSpec extends UnitSpec {
 			theMaxSize << [0, -1]
 	}
 
-	@IgnoreRest
 	def "upload should forward to the successController when successType is 'forward'"() {
 		
 		given: "an uploaded file"
@@ -188,24 +186,6 @@ class GridfsControllerSpec extends UnitSpec {
 				]
 			])
 		
-//		given: "a mock file"
-//			def theFile = new MockMultipartFile('file', 'myImage.jpg', 'image/jpeg', 123 as byte[])
-//			request.addFile(theFile)
-//		and: "a configuration"
-//			configureWith([
-//				controllers:		[
-//					successController:	"home",
-//					successAction:		"afterUpload",
-//					successType:		"forward"
-//				]
-//			])
-//		and: "some params" 
-//			params.file					= theFile
-//			params.idparent 			= "testUser"
-//			params.successController 	= "mySuccessController"
-//			params.successAction		= "theAction"
-//		and: "'forward' on success is set"
-//			params.successType 			= "forward"
 		and: "file is added okay"
 			def theGridFile = []
 			gridfsService.addToGridFS(_,_,_,_) >> theGridFile
