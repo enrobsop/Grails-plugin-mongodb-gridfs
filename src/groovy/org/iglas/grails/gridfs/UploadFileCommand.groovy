@@ -76,4 +76,11 @@ class UploadFileCommand {
 		gridfsService.exists(config, targetFilename)
 	}
 	
+	def addToGridFS() {
+		def gridFsFilename	= targetFilename.toLowerCase().replaceAll(/ /,"") // TODO Why? Should this be part of getTargetFilename?
+		def gfsFile			= gridfsService.addToGridFS(config, file, gridFsFilename)
+		gfsFile.setMetaData(metadata)
+		gfsFile
+	}
+	
 }

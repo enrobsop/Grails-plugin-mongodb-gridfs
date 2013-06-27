@@ -11,6 +11,8 @@ import spock.lang.Ignore
 import spock.lang.Shared
 import spock.lang.Unroll
 
+import com.mongodb.gridfs.GridFSFile
+
 //
 // Grails 2.2.2 bug causing errors in TestMixins for validation - waiting for fix
 //
@@ -170,5 +172,35 @@ class UploadFileCommandSpec extends UnitSpec {
 		where:
 			expectedResult << [true, false]
 	}
+	
+	@Unroll
+	def "should be able to add file to GridFS"() {
+		
+		given: "an uploaded file"
+			def multipartFile = Mock(MultipartFile)
+			multipartFile.getOriginalFilename() >> "my File.jpg"
+		and: "a command object"
+			def myConfig = []
+			def uploadCommand = new UploadFileCommand(
+				idparent:		"myId",
+				file:			multipartFile,
+				gridfsService:	gridfsService,
+				config:			myConfig
+			)
+		and: "a gridFS file"
+			def gfsFile = Mock(GridFSFile)
+			
+		when: "adding the file to gridFS"
+			def result = uploadCommand.addToGridFS()
+		
+		then: "the check is correctly delegated"
+			1 * gridfsService.addToGridFS(myConfig, multipartFile, "myid_myfile.jpg") >> gfsFile
+		then: "the file is configured with metadata"
+			1 * gfsFile.setMetaData(uploadCommand.metadata)
+		and: "the correct result is returned"
+			result == gfsFile
+			
+	}
+
 
 }

@@ -10,6 +10,8 @@ import org.springframework.web.multipart.MultipartFile
 import spock.lang.Shared
 import spock.lang.Unroll
 
+import com.mongodb.gridfs.GridFSFile
+
 @TestFor(GridfsController)
 @TestMixin(ControllerUnitTestMixin)
 class GridfsControllerSpec extends UnitSpec {
@@ -156,8 +158,8 @@ class GridfsControllerSpec extends UnitSpec {
 				file:				multipartFile
 			)
 		and: "file is added okay"
-			def theGridFile = []
-			gridfsService.addToGridFS(_,_,_,_) >> theGridFile
+			def theGridFile = Mock(GridFSFile)
+			gridfsService.addToGridFS(_,_,_) >> theGridFile
 		and: "upload access is given"
 			gridfsService.attemptUpload(_, _) >> [isAllowed: true, msg: null]
 
@@ -200,8 +202,8 @@ class GridfsControllerSpec extends UnitSpec {
 			])
 		
 		and: "file is added okay"
-			def theGridFile = []
-			gridfsService.addToGridFS(_,_,_,_) >> theGridFile
+			def theGridFile = Mock(GridFSFile)
+			gridfsService.addToGridFS(_,_,_) >> theGridFile
 		and: "upload access is given"
 			gridfsService.attemptUpload(_, _) >> [isAllowed: true, msg: null]
 		
