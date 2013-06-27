@@ -5,7 +5,6 @@ import grails.test.mixin.*
 import grails.test.mixin.web.ControllerUnitTestMixin
 
 import org.iglas.grails.utils.ConfigHelper
-import org.springframework.mock.web.MockMultipartFile
 import org.springframework.web.multipart.MultipartFile
 
 import spock.lang.Shared
@@ -24,7 +23,7 @@ class GridfsControllerSpec extends UnitSpec {
 	}
 	
 	def "upload should fail when idparent is missing"() {
-		given: "a command boject without idparent" 
+		given: "a command object without idparent" 
 			def ufc = mockCommandObject(UploadFileCommand)
 		
 		when: "attempt upload"
@@ -39,13 +38,14 @@ class GridfsControllerSpec extends UnitSpec {
 	
 	def "upload should fail when file is missing"() {
 		
-		given: "no file"
-		and: "the other rrequired params"
-			def theId = "anId"
-			params.idparent = theId
-		
+		given: "a command object without a file"
+			def theId	= "anId"
+			def uploadCommand = new UploadFileCommand(
+				idparent: theId
+			)
+			
 		when: "upload is attempted"
-			controller.upload()
+			controller.upload(uploadCommand)
 			
 		then: "an error message is given"
 			flash.message != null
@@ -58,15 +58,18 @@ class GridfsControllerSpec extends UnitSpec {
 	def "upload should fail when file is empty"() {
 		
 		given: "an empty file"
-			def theFile = new MockMultipartFile('file', 'empty.jpg', 'image/jpeg', '' as byte[])
-			request.addFile(theFile)
-
-		and: "the other required params"
-			def theId = "anId"
-			params.idparent = theId
+			def multipartFile = Mock(MultipartFile)
+			multipartFile.getOriginalFilename() >> "empty.jpg"
+			multipartFile.getSize() >> 0
+		and: "a command object"
+			def theId	= "anId"
+			def uploadCommand = new UploadFileCommand(
+				idparent: 			theId,
+				file:				multipartFile
+			)
 			
 		when: "upload is attempted"
-			controller.upload()
+			controller.upload(uploadCommand)
 			
 		then: "an error message is given"
 			flash.message != null
@@ -77,20 +80,23 @@ class GridfsControllerSpec extends UnitSpec {
 	}
 	
 	def "upload should fail when file extension is not on allowed list"() {
-		
-		given: "a file with a disallowed extension"
-			def disallowedExtension	= "bad"
-			def theFile				= new MockMultipartFile('file', "aFile.$disallowedExtension", 'image/jpeg', '123' as byte[])
-			request.addFile(theFile)
 
-		and: "the other required params"
-			def theId = "anId"
-			params.idparent = theId
+		given: "an uploaded file with a disallowed extension"
+			def disallowedExtension	= "bad"
+			def multipartFile = Mock(MultipartFile)
+			multipartFile.getOriginalFilename() >> "aFile.$disallowedExtension"
+			multipartFile.getSize() >> 123
+		and: "a command object"
+			def theId	= "anId"
 			def paramId = "123"
-			params.id = paramId
-		
+			def uploadCommand = new UploadFileCommand(
+				id:					paramId,
+				idparent: 			theId,
+				file:				multipartFile
+			)
+
 		when: "upload is attempted"
-			controller.upload()
+			controller.upload(uploadCommand)
 			
 		then: "an error message is given"
 			flash.message != null
@@ -103,22 +109,25 @@ class GridfsControllerSpec extends UnitSpec {
 	
 	def "upload should fail when the file size exceeds the max size"() {
 		given: "a file size limit"
-			def KB = 1024
-			def theSizeLimit = 123 * KB 
+			def KB 				= 1024
+			def theSizeLimit	= 123 * KB 
+			def tooBig			= theSizeLimit + 1
 			configureWith([maxSize: theSizeLimit])
-		and: "a file that is too big"
-			def tooBig	= theSizeLimit + 1
-			def theData	= new byte[tooBig]
-			def theFile	= new MockMultipartFile('file', "aFile.jpg", 'image/jpeg', theData)
-			request.addFile(theFile)
-		and: "the other required params"
-			def theId = "anId"
-			params.idparent = theId
+		and: "an uploaded file that is too big"
+			def multipartFile = Mock(MultipartFile)
+			multipartFile.getOriginalFilename() >> "aFile.jpg"
+			multipartFile.getSize() >> tooBig
+		and: "a command object"
+			def theId	= "anId"
 			def paramId = "123"
-			params.id = paramId
+			def uploadCommand = new UploadFileCommand(
+				id:					paramId,
+				idparent: 			theId,
+				file:				multipartFile
+			)
 
 		when: "upload is attempted"
-			controller.upload()
+			controller.upload(uploadCommand)
 			
 		then: "an error message is given"
 			flash.message != null
@@ -133,16 +142,18 @@ class GridfsControllerSpec extends UnitSpec {
 	def "file upload should not check the maxSize when the limit is #theMaxSize"() {
 		given: "a file size limit"
 			configureWith([maxSize: theMaxSize])
-		and: "a file with data"
-			def MB		= 1024 * 1000
-			def theData	= new byte[2 * MB]
-			def theFile	= new MockMultipartFile('file', "aFile.jpg", 'image/jpeg', theData)
-			request.addFile(theFile)
-		and: "the other required params"
+		and: "an uploaded file"
+			def multipartFile = Mock(MultipartFile)
+			multipartFile.getOriginalFilename() >> "aFile.jpg"
+			multipartFile.getSize() >> 1024000
+		and: "a command object"
 			def theId = "anId"
-			params.idparent = theId
 			def paramId = "123"
-			params.id = paramId
+			def uploadCommand = new UploadFileCommand(
+				id:					paramId,
+				idparent: 			theId,
+				file:				multipartFile
+			)
 		and: "file is added okay"
 			def theGridFile = []
 			gridfsService.addToGridFS(_,_,_,_) >> theGridFile
@@ -150,7 +161,7 @@ class GridfsControllerSpec extends UnitSpec {
 			gridfsService.attemptUpload(_, _) >> [isAllowed: true, msg: null]
 
 		when: "upload is attempted"
-			controller.upload()
+			controller.upload(uploadCommand)
 			
 		then: "no error message is given"
 			flash.message == null
