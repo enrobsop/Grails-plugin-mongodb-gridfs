@@ -4,6 +4,7 @@ import grails.plugin.spock.UnitSpec
 import grails.test.mixin.*
 import grails.test.mixin.web.ControllerUnitTestMixin
 
+import org.codehaus.groovy.grails.web.mime.DefaultAcceptHeaderParser;
 import org.iglas.grails.gridfs.UploadFileCommand
 
 import spock.lang.Ignore
@@ -69,4 +70,65 @@ class UploadFileCommandSpec extends UnitSpec {
 
 	}
 	
+	def "should populate a MongoDB metadata object correctly"() {
+		
+		given: "a properly configured command object"
+			def theIdParent 		= "myId"
+			def theOriginalFilename	= "MyFile"
+			def theFileExtension	= "JPG"
+			def theParentClass		= "User"
+			def theText				= "Hello World!"
+			def theAccess			= "private"
+			def commandObject = new UploadFileCommand(
+				idparent:			theIdParent,
+				originalFilename:	theOriginalFilename,
+				fileExtension:		theFileExtension,
+				parentclass:		theParentClass,
+				text:				theText,
+				accesspolitic:		theAccess
+			)
+		
+		when: "getting the MongoDB metadata"
+			def metadata = commandObject.getMetadata()
+		
+		then: "the metadata exists"
+			metadata != null
+		and: "it has all of the correct values"
+		 	metadata.get("idparent")			== theIdParent
+			metadata.get("originalFilename") 	== theOriginalFilename.toLowerCase()
+			metadata.get("fileExtension") 		== theFileExtension.toLowerCase()
+			metadata.get("parentclass") 		== theParentClass
+			metadata.get("text") 				== theText
+			metadata.get("access") 				== theAccess
+			
+	}
+
+	def "should use correct default values in a MongoDB metadata"() {
+		
+		given: "a properly configured command object"
+			def theIdParent 		= "myId"
+			def theOriginalFilename	= "MyFile"
+			def theFileExtension	= "JPG"
+			def commandObject = new UploadFileCommand(
+				idparent:			theIdParent,
+				originalFilename:	theOriginalFilename,
+				fileExtension:		theFileExtension
+			)
+		
+		when: "getting the MongoDB metadata"
+			def metadata = commandObject.getMetadata()
+		
+		then: "the metadata exists"
+			metadata != null
+		and: "it has all of the correct values"
+			 metadata.get("idparent")			== theIdParent
+			metadata.get("originalFilename") 	== theOriginalFilename.toLowerCase()
+			metadata.get("fileExtension") 		== theFileExtension.toLowerCase()
+			metadata.get("access") 				== "public"
+
+			metadata.keySet().contains("parentclass")	== false
+			metadata.keySet().contains("text")			== false
+
+	}
+
 }
