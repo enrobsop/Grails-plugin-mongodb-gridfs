@@ -1,11 +1,10 @@
 package org.iglas.grails
-
 import grails.plugin.spock.UnitSpec
 import grails.test.mixin.*
 import grails.test.mixin.web.ControllerUnitTestMixin
 
-import org.codehaus.groovy.grails.web.mime.DefaultAcceptHeaderParser;
 import org.iglas.grails.gridfs.UploadFileCommand
+import org.springframework.web.multipart.MultipartFile
 
 import spock.lang.Ignore
 import spock.lang.Unroll
@@ -24,15 +23,18 @@ class UploadFileCommandSpec extends UnitSpec {
 	@Unroll
 	def "the correct target filename should be given when #scenario"() {
 	
-		given:
-			def newUploadFile = new UploadFileCommand(
+		given: "a mock file upload"
+			def multipartFile = Mock(MultipartFile)
+			multipartFile.getOriginalFilename() >> originalFilename
+		and: "a command object"
+			def uploadCommand = new UploadFileCommand(
 				idparent: 			idparent,
 				parentclass:		parentclass,
-				originalFilename:	originalFilename
+				file:				multipartFile
 			) 
 			
 		expect:
-			newUploadFile.targetFilename == expectedNewFilename
+			uploadCommand.targetFilename == expectedNewFilename
 		
 		where:
 			scenario			| idparent	| parentclass	| originalFilename	| expectedNewFilename
@@ -72,24 +74,27 @@ class UploadFileCommandSpec extends UnitSpec {
 	
 	def "should populate a MongoDB metadata object correctly"() {
 		
-		given: "a properly configured command object"
-			def theIdParent 		= "myId"
-			def theOriginalFilename	= "MyFile"
+		given: "some attributes" 
 			def theFileExtension	= "JPG"
+			def theOriginalFilename	= "MyFile.${theFileExtension}"
+			def theIdParent 		= "myId"
 			def theParentClass		= "User"
 			def theText				= "Hello World!"
 			def theAccess			= "private"
-			def commandObject = new UploadFileCommand(
-				idparent:			theIdParent,
-				originalFilename:	theOriginalFilename,
-				fileExtension:		theFileExtension,
+		and: "an uploaded file"
+			def multipartFile = Mock(MultipartFile)
+			multipartFile.getOriginalFilename() >> theOriginalFilename
+		and: "a command object"
+			def uploadCommand = new UploadFileCommand(
+				idparent: 			theIdParent,
 				parentclass:		theParentClass,
+				file:				multipartFile,
 				text:				theText,
 				accesspolitic:		theAccess
 			)
 		
 		when: "getting the MongoDB metadata"
-			def metadata = commandObject.getMetadata()
+			def metadata = uploadCommand.getMetadata()
 		
 		then: "the metadata exists"
 			metadata != null
@@ -104,24 +109,27 @@ class UploadFileCommandSpec extends UnitSpec {
 	}
 
 	def "should use correct default values in a MongoDB metadata"() {
-		
-		given: "a properly configured command object"
-			def theIdParent 		= "myId"
-			def theOriginalFilename	= "MyFile"
+
+		given: "some attributes"
 			def theFileExtension	= "JPG"
-			def commandObject = new UploadFileCommand(
-				idparent:			theIdParent,
-				originalFilename:	theOriginalFilename,
-				fileExtension:		theFileExtension
+			def theOriginalFilename	= "MyFile.${theFileExtension}"
+			def theIdParent 		= "myId"
+		and: "an uploaded file"
+			def multipartFile = Mock(MultipartFile)
+			multipartFile.getOriginalFilename() >> theOriginalFilename
+		and: "a command object"
+			def uploadCommand = new UploadFileCommand(
+				idparent: 			theIdParent,
+				file:				multipartFile
 			)
-		
+				
 		when: "getting the MongoDB metadata"
-			def metadata = commandObject.getMetadata()
+			def metadata = uploadCommand.getMetadata()
 		
 		then: "the metadata exists"
 			metadata != null
 		and: "it has all of the correct values"
-			 metadata.get("idparent")			== theIdParent
+			metadata.get("idparent")			== theIdParent
 			metadata.get("originalFilename") 	== theOriginalFilename.toLowerCase()
 			metadata.get("fileExtension") 		== theFileExtension.toLowerCase()
 			metadata.get("access") 				== "public"

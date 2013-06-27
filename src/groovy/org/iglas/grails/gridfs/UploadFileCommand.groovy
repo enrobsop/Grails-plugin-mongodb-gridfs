@@ -1,6 +1,8 @@
 package org.iglas.grails.gridfs
 
 import org.codehaus.groovy.grails.validation.Validateable
+import org.iglas.grails.utils.ConfigHelper
+import org.springframework.web.multipart.MultipartFile
 
 import com.mongodb.BasicDBObject
 import com.mongodb.DBObject
@@ -8,25 +10,42 @@ import com.mongodb.DBObject
 @Validateable
 class UploadFileCommand {
 
-	String idparent
-	String originalFilename
-	String fileExtension
+	transient def config
+	
+	String 			idparent
+	MultipartFile	file
 	
 	String parentclass
 	String text
 	String accesspolitic	= "public"
 	
+	String id
+	String successController
+	String successAction
+	String successType
+	
 	static constraints = {
+		file				nullable:false
 		idparent 			nullable:false
-		originalFilename	nullable:false
-		fileExtension		nullable:false
-		parentClass			nullable:true
+		parentclass			nullable:true
 		text				nullable:true
 		accesspolitic		nullable:true
+		successController	nullable:true
+		successAction		nullable:true
+		successType			nullable:true
+		id					nullable:true
 	}
 	
 	void setAccesspolitic(String val) {
 		this.accesspolitic = val ?: 'public'
+	}
+	
+	def getOriginalFilename() {
+		file?.originalFilename
+	}
+	
+	def getFileExtension() {
+		file.originalFilename.substring(file.originalFilename.lastIndexOf('.')+1)
 	}
 	
 	def getTargetFilename() {

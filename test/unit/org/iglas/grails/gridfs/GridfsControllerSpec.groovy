@@ -2,14 +2,18 @@ package org.iglas.grails.gridfs
 
 import grails.plugin.spock.UnitSpec
 import grails.test.mixin.*
+import grails.test.mixin.web.ControllerUnitTestMixin
 
 import org.iglas.grails.utils.ConfigHelper
 import org.springframework.mock.web.MockMultipartFile
+import org.springframework.web.multipart.MultipartFile
 
+import spock.lang.IgnoreRest
 import spock.lang.Shared
 import spock.lang.Unroll
 
 @TestFor(GridfsController)
+@TestMixin(ControllerUnitTestMixin)
 class GridfsControllerSpec extends UnitSpec {
 
 	@Shared gridfsService
@@ -21,11 +25,11 @@ class GridfsControllerSpec extends UnitSpec {
 	}
 	
 	def "upload should fail when idparent is missing"() {
-		given: "no idparent param"
-			// nothing
+		given: "a command boject without idparent" 
+			def ufc = mockCommandObject(UploadFileCommand)
 		
 		when: "attempt upload"
-			controller.upload()
+			controller.upload(ufc)
 			
 		then: "an error message is given"
 			flash.message != null
@@ -158,13 +162,23 @@ class GridfsControllerSpec extends UnitSpec {
 			theMaxSize << [0, -1]
 	}
 
-	
+	@IgnoreRest
 	def "upload should forward to the successController when successType is 'forward'"() {
 		
-		given: "a mock file"
-			def theFile = new MockMultipartFile('file', 'myImage.jpg', 'image/jpeg', 123 as byte[])
-			theFile.size() >> 1234567L 
-			request.addFile(theFile)
+		given: "an uploaded file"
+			def theFileExtension	= "jpg"
+			def theOriginalFilename	= "myImage.${theFileExtension}"
+			def multipartFile = Mock(MultipartFile)
+			multipartFile.getOriginalFilename() >> theOriginalFilename
+			multipartFile.getSize() >> 1024000
+		and: "a command object"
+			def uploadCommand = new UploadFileCommand(
+				idparent: 			"testUser",
+				file:				multipartFile,
+				successController: 	"mySuccessController",
+				successAction:		"theAction",
+				successType: 		"forward"
+			)
 		and: "a configuration"
 			configureWith([
 				controllers:		[
@@ -173,13 +187,25 @@ class GridfsControllerSpec extends UnitSpec {
 					successType:		"forward"
 				]
 			])
-		and: "some params" 
-			params.file					= theFile
-			params.idparent 			= "testUser"
-			params.successController 	= "mySuccessController"
-			params.successAction		= "theAction"
-		and: "'forward' on success is set"
-			params.successType 			= "forward"
+		
+//		given: "a mock file"
+//			def theFile = new MockMultipartFile('file', 'myImage.jpg', 'image/jpeg', 123 as byte[])
+//			request.addFile(theFile)
+//		and: "a configuration"
+//			configureWith([
+//				controllers:		[
+//					successController:	"home",
+//					successAction:		"afterUpload",
+//					successType:		"forward"
+//				]
+//			])
+//		and: "some params" 
+//			params.file					= theFile
+//			params.idparent 			= "testUser"
+//			params.successController 	= "mySuccessController"
+//			params.successAction		= "theAction"
+//		and: "'forward' on success is set"
+//			params.successType 			= "forward"
 		and: "file is added okay"
 			def theGridFile = []
 			gridfsService.addToGridFS(_,_,_,_) >> theGridFile
@@ -187,7 +213,7 @@ class GridfsControllerSpec extends UnitSpec {
 			gridfsService.attemptUpload(_, _) >> [isAllowed: true, msg: null]
 		
 		when: "uploaded successfully"
-			controller.upload()
+			controller.upload(uploadCommand)
 		
 		then: "there are no error messages"
 			flash.message == null

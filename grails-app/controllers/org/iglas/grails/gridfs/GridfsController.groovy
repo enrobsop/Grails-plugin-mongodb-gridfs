@@ -25,20 +25,17 @@ class GridfsController {
         GridfsService.list(params)
     }
 	
-    def upload(params){
+    def upload(UploadFileCommand command){
 
         def config = configHelper.getConfig(params)
+		command.config = config
 		
-        if (failBecauseIdParentMissing(config)) return
+        if (failBecauseIdParentMissing(command)) return
 		
-        def file = request.getFile("file")
-		if (failBecauseFileInvalid(file, config)) return
+        def file = command.file
+		if (failBecauseFileInvalid(command)) return
 		
-        String newFileName = (params.idparent + "_" + file.originalFilename).toLowerCase()
-        if (params?.parentclass)
-        {
-            newFileName = params.parentclass + "_" + newFileName
-        }
+		String newFileName = command.targetFilename 
 
         if(!gridfsService.exists(config, newFileName)){
 			
@@ -142,28 +139,32 @@ class GridfsController {
 
     }
 
-	private def failBecauseIdParentMissing(config) {
-		failIf(config, messageSource.getMessage("mongodb-gridfs.paramsbad", [params.idparent] as Object[], "Invalid params", request.locale)) {
-			!params.idparent
+	private def failBecauseIdParentMissing(command) {
+		def config = command.config
+		failIf(config, messageSource.getMessage("mongodb-gridfs.paramsbad", [command.idparent] as Object[], "Invalid params", request.locale)) {
+			!command.idparent
 		}
 	}
 	
-	private def failBecauseFileMissing(file, config) {
-		failIf(config, messageSource.getMessage("mongodb-gridfs.upload.nofile", null, "No file was found with id {0}. Please check your link.", request.locale), [id: params.idparent]) {
-			isEmptyFile(file)
+	private def failBecauseFileMissing(command) {
+		failIf(command.config, messageSource.getMessage("mongodb-gridfs.upload.nofile", null, "No file was found with id {0}. Please check your link.", request.locale), [id: command.idparent]) {
+			isEmptyFile(command.file)
 		}
 	}
 
-	private def failBecauseUnauthorizedFileExtension(file, config) {
-		def fileExtension = file.originalFilename.substring(file.originalFilename.lastIndexOf('.')+1)
-		failIf(config, messageSource.getMessage("mongodb-gridfs.upload.unauthorizedExtension", [fileExtension, config.allowedExtensions] as Object[], "The file you sent has an unauthorized extension ({0}). Allowed extensions for this upload are {1}", request.locale), [id: params.id]) {
-			!config.allowedExtensions.contains(fileExtension)
+	private def failBecauseUnauthorizedFileExtension(command) {
+		def config = command.config
+		def fileExtension = command.fileExtension
+		failIf(config, messageSource.getMessage("mongodb-gridfs.upload.unauthorizedExtension", [fileExtension, config.allowedExtensions] as Object[], "The file you sent has an unauthorized extension ({0}). Allowed extensions for this upload are {1}", request.locale), [id: command.id]) {
+			!config.allowedExtensions.contains(command.fileExtension)
 		}
 	}
 	
-	private def failBecauseFileTooBig(file, config) {
+	private def failBecauseFileTooBig(command) {
+		def config	= command.config
+		def file	= command.file
 		def maxSizeInKb = (int) (config.maxSize ?: 0)/1024
-		failIf(config, messageSource.getMessage("mongodb-gridfs.upload.fileBiggerThanAllowed", [maxSizeInKb] as Object[], "Sent file is bigger than allowed. Max file size is {0} kb", request.locale), [id: params.id]) {
+		failIf(config, messageSource.getMessage("mongodb-gridfs.upload.fileBiggerThanAllowed", [maxSizeInKb] as Object[], "Sent file is bigger than allowed. Max file size is {0} kb", request.locale), [id: command.id]) {
 			def limit = Math.max(config.maxSize ?: 0, 0)
 			limit && file.size > limit
 		}
@@ -181,10 +182,10 @@ class GridfsController {
 		false
 	}
 	
-	private def failBecauseFileInvalid(file, config) {
-		failBecauseFileMissing(file, config) ||
-		failBecauseUnauthorizedFileExtension(file, config) ||
-		failBecauseFileTooBig(file, config)
+	private def failBecauseFileInvalid(command) {
+		failBecauseFileMissing(command) ||
+		failBecauseUnauthorizedFileExtension(command) ||
+		failBecauseFileTooBig(command)
 	}
 	
 	private def isEmptyFile(file) {
