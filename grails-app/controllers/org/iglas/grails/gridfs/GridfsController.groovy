@@ -24,23 +24,30 @@ class GridfsController {
     def list(params){
         GridfsService.list(params)
     }
+	
+	private def redirectBecauseIdParentMissing(config) {
+        if(!params?.idparent) {
+			log.debug "Input params is bad"
+			flash.message = messageSource.getMessage("mongodb-gridfs.paramsbad", [params.idparent] as Object[], "Invalid params", request.locale)
+			redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.id
+			return true
+        }
+		false
+	}
+	
+	private def isEmptyFile() {
+		!file || file.size == 0
+	}
 
     def upload(params){
 
-        //request file
-
         def config = configHelper.getConfig(params)
-        if(!params?.idparent){
-            log.debug "Input params is bad"
-            flash.message = messageSource.getMessage("mongodb-gridfs.paramsbad", [params.idparent] as Object[], "Invalid params", request.locale)
-            redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.id
-            return
-        }
+		
+        if (redirectBecauseIdParentMissing(config)) return
+		
         def file = request.getFile("file")
-        /**************************
-         check if file exists
-         **************************/
-        if (!file || file.size == 0) {
+		
+        if (isEmptyFile(file)) {
             def msg = messageSource.getMessage("mongodb-gridfs.upload.nofile", null, "No file was found with id {0}. Please check your link.", request.locale)
             log.debug msg
             flash.message = msg

@@ -17,8 +17,23 @@ class GridfsControllerSpec extends UnitSpec {
 
 	def setup() {
 		gridfsService = Mock(GridfsService)
-		controller.gridfsService = gridfsService		
-	}	
+		controller.gridfsService = gridfsService
+		configureWith()
+	}
+	
+	def "upload should fail when idparent is missing"() {
+		given: "no idparent param"
+			// nothing
+		
+		when: "attempt upload"
+			controller.upload()
+			
+		then: "an error message is given"
+			flash.message != null
+			flash.message =~ ~/(?i).*invalid.*/
+		and: "the client is redirected to the error controller"
+			response.redirectUrl == "/error/index"
+	}
 	
 	def "upload should forward to the successController when successType is 'forward'"() {
 		
@@ -63,11 +78,12 @@ class GridfsControllerSpec extends UnitSpec {
 			db:					[host: "mongoHost"],
 			controllers:		[
 				successController:	"home",
-				successAction:		"index"
+				successAction:		"index",
+				errorController:	"error",
+				errorAction:		"index",
 			]
 		]
 		def config = defaultConfig << options 
-		println config
 		
 		def configHelper = Mock(ConfigHelper)
 		configHelper.getConfig(_) >> config
