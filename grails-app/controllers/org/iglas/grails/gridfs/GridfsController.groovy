@@ -1,18 +1,18 @@
 package org.iglas.grails.gridfs
 
-import com.mongodb.DBObject
-import com.mongodb.Mongo
-import com.mongodb.DB
-import com.mongodb.gridfs.GridFS
-import com.mongodb.gridfs.GridFSInputFile
-import com.mongodb.BasicDBObject
-import com.mongodb.gridfs.GridFSDBFile
-//import org.iglas.grails.utils.FilesConfig
 import org.iglas.grails.utils.*
-import com.mongodb.DBCollection
+
+import com.mongodb.BasicDBObject
+import com.mongodb.DBObject
+import com.mongodb.gridfs.GridFSDBFile
+import com.mongodb.gridfs.GridFSInputFile
 
 class GridfsController {
 
+	def configHelper = new ConfigHelper()  // for easier testing
+	
+	def gridfsService
+	
     //messagesource
     def messageSource
 
@@ -29,10 +29,10 @@ class GridfsController {
 
         //request file
 
-        def config = new UserConfig(GridfsService.configName).get(Gridfs.makeConfig(params))
+        def config = configHelper.getConfig(params)
         if(!params?.idparent){
             log.debug "Input params is bad"
-            flash.message = messageSource.getMessage("mongodb-gridfs.paramsbad", [params.idparent] as Object[], request.locale)
+            flash.message = messageSource.getMessage("mongodb-gridfs.paramsbad", [params.idparent] as Object[], "Invalid params", request.locale)
             redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.id
             return
         }
@@ -40,8 +40,8 @@ class GridfsController {
         /**************************
          check if file exists
          **************************/
-        if (file.size == 0) {
-            def msg = messageSource.getMessage("mongodb-gridfs.upload.nofile", null, request.locale)
+        if (!file || file.size == 0) {
+            def msg = messageSource.getMessage("mongodb-gridfs.upload.nofile", null, "No file was found with id {0}. Please check your link.", request.locale)
             log.debug msg
             flash.message = msg
             redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.idparent
@@ -74,15 +74,7 @@ class GridfsController {
                 return            }
         }
 
-
-        DBObject metadata = new BasicDBObject()
-        Mongo mongo = new Mongo(config.db.host)
-        DB db  = mongo.getDB(config.db.name)
-        DBCollection col = db.getCollection(config.db.collection + ".files")
-        col.ensureIndex(new BasicDBObject(config.indexes))
-        GridFS gfsFiles = new GridFS(db, config.db.collection )
-
-
+		
         String newFileName = (params.idparent + "_" + file.originalFilename).toLowerCase()
         if (params?.parentclass)
         {
@@ -90,39 +82,23 @@ class GridfsController {
             metadata.put("parentclass",params.parentclass)
         }
 
-        if(!gfsFiles.findOne(newFileName)){
-            GridFSInputFile gfsFile = gfsFiles.createFile(file.getInputStream(),newFileName.toLowerCase().replaceAll(/ /,""))
-            // gfsFile.setFilename()
 
-            metadata.put("idparent",params.idparent)
-            metadata.put("originalFilename",file.originalFilename.toLowerCase())
-            metadata.put("fileExtension",fileExtension.toLowerCase())
-
-            if(params?.text)
-                metadata.put("text",params?.text)
-            if(params["accesspolitic"])
-                metadata.put("access",params["accesspolitic"])
-            else
-                metadata.put("access","public")
-
-            gfsFile.setMetaData(metadata)
-            def accessResult = true
-            def access
-
-            if (config.accessClass && config.accessMethod){
-                access = Class.forName(config.accessClass  ,true,Thread.currentThread().contextClassLoader).newInstance()
-                accessResult = access."${config.accessMethod}"(gfsFile,"upload")
-            }
-
-            if (accessResult )
+        if(!gridfsService.exists(config, newFileName)){
+			
+            def gfsFile		= gridfsService.addToGridFS(config,file, newFileName.toLowerCase().replaceAll(/ /,""), params) 
+			def checkUpload	= gridfsService.attemptUpload(config, gfsFile)
+			
+            if (checkUpload.isAllowed)
             {
-                gfsFile.save()
-                redirect controller: config.controllers.successController, action: config.controllers.successAction
+				if (config.controllers.successType == "forward") {
+					forward controller: config.controllers.successController, action: config.controllers.successAction
+				} else {
+                	redirect controller: config.controllers.successController, action: config.controllers.successAction
+				}
             }
             else
             {
-
-                log.debug "Access deny upload:" + access?.message
+                log.debug "Access deny upload:" + checkUpload?.message
                 flash.message = messageSource.getMessage("mongodb-gridfs.get.accessdeny", [access.message] as Object[], request.locale)
                 redirect controller: config.accessController, action: config.accessAction
             }
@@ -170,7 +146,6 @@ class GridfsController {
                         redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.id
                     }
             } catch (e){
-                println(e.message)
                 def fileForOutput = false
             }
 

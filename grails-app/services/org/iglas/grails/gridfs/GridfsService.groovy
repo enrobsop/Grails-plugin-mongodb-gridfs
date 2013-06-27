@@ -1,14 +1,16 @@
 package org.iglas.grails.gridfs
 
-import com.mongodb.Mongo
+import org.codehaus.groovy.grails.web.taglib.exceptions.GrailsTagException
 import org.iglas.grails.utils.UserConfig
+
+import com.mongodb.BasicDBObject
 import com.mongodb.DB
+import com.mongodb.DBCollection
+import com.mongodb.DBObject
+import com.mongodb.Mongo
 import com.mongodb.gridfs.GridFS
 import com.mongodb.gridfs.GridFSDBFile
-import com.mongodb.DBObject
-import com.mongodb.BasicDBObject
-import com.mongodb.gridfs.GridFSFile
-import org.codehaus.groovy.grails.web.taglib.exceptions.GrailsTagException
+import com.mongodb.gridfs.GridFSInputFile
 
 class GridfsService {
     public static total
@@ -63,6 +65,55 @@ class GridfsService {
         result
 
     }
+	
+	public boolean exists(config, filename) {
+		getGridFS(config).findOne(filename) != null
+	}
+	public def addToGridFS(config,file, filename) {
+		(GridFSInputFile) getGridFS(config).createFile(file.getInputStream(),filename)
+	}
+	public def addToGridFS(config, file, filename, params) {
+		def inputFile = addToGridFS(config, file, filename)
+		setMetaData(params, inputFile)
+	}
+	public def attemptUpload(config, gfsFile) {
+		def accessResult = true
+		def access
+		if (config.accessClass && config.accessMethod){
+			access = Class.forName(config.accessClass  ,true,Thread.currentThread().contextClassLoader).newInstance()
+			accessResult = access."${config.accessMethod}"(gfsFile,"upload")
+		}
+		if (accessResult) {
+			gfsFile.save()
+		}
+		[isAllowed: accessResult, msg: access?.message]
+	}
+	private def getGridFS(config) {
+		Mongo mongo = new Mongo(config.db.host)
+		DB db  = mongo.getDB(config.db.name)
+		DBCollection col = db.getCollection(config.db.collection + ".files")
+		col.ensureIndex(new BasicDBObject(config.indexes))
+		new GridFS(db, config.db.collection)
+	}
+	private def setMetaData(params, gfsFile) {
+		DBObject metadata = new BasicDBObject()
+		metadata.put("idparent",params.idparent)
+		metadata.put("originalFilename",file.originalFilename.toLowerCase())
+		metadata.put("fileExtension",fileExtension.toLowerCase())
+
+		if(params?.text)
+			metadata.put("text",params?.text)
+		if(params["accesspolitic"])
+			metadata.put("access",params["accesspolitic"])
+		else
+			metadata.put("access","public")
+
+		gfsFile.setMetaData(metadata)
+		gfsFile
+	}
+	
+	
+
     public static GridFS getStore() {
         def config = new UserConfig(configName).get()
         GridFS gfsFiles
