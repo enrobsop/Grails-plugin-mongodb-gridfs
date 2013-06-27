@@ -30,13 +30,9 @@ class GridfsController {
         def config = configHelper.getConfig(params)
 		command.config = config
 		
-        if (failBecauseIdParentMissing(command)) return
+		// TODO switch to Grails Validation framework?
+        if (failBecauseIdParentMissing(command) || failBecauseFileInvalid(command)) return
 		
-        def file = command.file
-		if (failBecauseFileInvalid(command)) return
-		
-		String newFileName = command.targetFilename 
-
         if(!command.targetFileExists()){
 			
 			def checkUpload = command.createTargetFile()
@@ -57,11 +53,10 @@ class GridfsController {
             }
 
         } else {
-            log.debug "Filename for 'idparent'=${file.originalFilename} is busy"
-            flash.message = messageSource.getMessage("mongodb-gridfs.upload.nameinbusy", [file.originalFilename] as Object[], request.locale)
+            log.debug "Filename for 'idparent'=${command.originalFilename} is busy"
+            flash.message = messageSource.getMessage("mongodb-gridfs.upload.nameinbusy", [command.originalFilename] as Object[], request.locale)
             redirect controller: config.controllers.errorController, action: config.controllers.errorAction
         }
-
 
     }
     def get(params){

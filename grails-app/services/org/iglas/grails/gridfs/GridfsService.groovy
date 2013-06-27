@@ -72,15 +72,11 @@ class GridfsService {
 	public def addToGridFS(config,file, filename) {
 		(GridFSInputFile) getGridFS(config).createFile(file.getInputStream(),filename)
 	}
-	public def addToGridFS(config, file, filename, params) {
-		def inputFile = addToGridFS(config, file, filename)
-		setMetaData(params, inputFile)
-	}
 	public def attemptUpload(config, gfsFile) {
 		def accessResult = true
 		def access
 		if (config.accessClass && config.accessMethod){
-			access = Class.forName(config.accessClass  ,true,Thread.currentThread().contextClassLoader).newInstance()
+			access = Class.forName(config.accessClass,true,Thread.currentThread().contextClassLoader).newInstance()
 			accessResult = access."${config.accessMethod}"(gfsFile,"upload")
 		}
 		if (accessResult) {
@@ -95,32 +91,8 @@ class GridfsService {
 		col.ensureIndex(new BasicDBObject(config.indexes))
 		new GridFS(db, config.db.collection)
 	}
-	private def setMetaData(params, gfsFile) {
-		DBObject metadata = new BasicDBObject()
-		metadata.put("idparent",params.idparent)
-		metadata.put("originalFilename",file.originalFilename.toLowerCase())
-		metadata.put("fileExtension",fileExtension.toLowerCase())
-		
-		String newFileName = (params.idparent + "_" + file.originalFilename).toLowerCase()
-		if (params?.parentclass)
-		{
-			newFileName = params.parentclass + "_" + newFileName
-			metadata.put("parentclass",params.parentclass)
-		}
 
-		if(params?.text)
-			metadata.put("text",params?.text)
-		if(params["accesspolitic"])
-			metadata.put("access",params["accesspolitic"])
-		else
-			metadata.put("access","public")
-
-		gfsFile.setMetaData(metadata)
-		gfsFile
-	}
 	
-	
-
     public static GridFS getStore() {
         def config = new UserConfig(configName).get()
         GridFS gfsFiles
