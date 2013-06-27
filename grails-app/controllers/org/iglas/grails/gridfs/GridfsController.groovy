@@ -25,55 +25,6 @@ class GridfsController {
         GridfsService.list(params)
     }
 	
-	private def failBecauseIdParentMissing(config) {
-		failIf(config, messageSource.getMessage("mongodb-gridfs.paramsbad", [params.idparent] as Object[], "Invalid params", request.locale)) {
-			!params.idparent
-		}
-	}
-	
-	private def failBecauseFileMissing(file, config) {		
-		failIf(config, messageSource.getMessage("mongodb-gridfs.upload.nofile", null, "No file was found with id {0}. Please check your link.", request.locale), [id: params.idparent]) {
-			isEmptyFile(file)	
-		}
-	}
-
-	private def failBecauseUnauthorizedFileExtension(file, config) {
-		def fileExtension = file.originalFilename.substring(file.originalFilename.lastIndexOf('.')+1)
-		failIf(config, messageSource.getMessage("mongodb-gridfs.upload.unauthorizedExtension", [fileExtension, config.allowedExtensions] as Object[], "The file you sent has an unauthorized extension ({0}). Allowed extensions for this upload are {1}", request.locale), [id: params.id]) {
-			!config.allowedExtensions.contains(fileExtension)
-		}
-	}
-	
-	private def failBecauseFileTooBig(file, config) {
-		def maxSizeInKb = (int) (config.maxSize ?: 0)/1024
-		failIf(config, messageSource.getMessage("mongodb-gridfs.upload.fileBiggerThanAllowed", [maxSizeInKb] as Object[], "Sent file is bigger than allowed. Max file size is {0} kb", request.locale), [id: params.id]) {
-			def limit = Math.max(config.maxSize ?: 0, 0) 
-			limit && file.size > limit
-		}
-	}
-
-	private def failIf(config, msg, params=[:], failureCondition) {
-		if (failureCondition()) {
-			log.debug msg
-			flash.message = msg
-			redirect controller:	config.controllers.errorController,
-					action:			config.controllers.errorAction, 
-					params:			params
-			return true
-		}
-		false
-	}
-	
-	private def failBecauseFileInvalid(file, config) {
-		failBecauseFileMissing(file, config) || 
-		failBecauseUnauthorizedFileExtension(file, config) ||
-		failBecauseFileTooBig(file, config)
-	}
-	
-	private def isEmptyFile(file) {
-		!file || file.size == 0
-	}
-
     def upload(params){
 
         def config = configHelper.getConfig(params)
@@ -190,5 +141,54 @@ class GridfsController {
     def help(){
 
     }
+
+	private def failBecauseIdParentMissing(config) {
+		failIf(config, messageSource.getMessage("mongodb-gridfs.paramsbad", [params.idparent] as Object[], "Invalid params", request.locale)) {
+			!params.idparent
+		}
+	}
+	
+	private def failBecauseFileMissing(file, config) {
+		failIf(config, messageSource.getMessage("mongodb-gridfs.upload.nofile", null, "No file was found with id {0}. Please check your link.", request.locale), [id: params.idparent]) {
+			isEmptyFile(file)
+		}
+	}
+
+	private def failBecauseUnauthorizedFileExtension(file, config) {
+		def fileExtension = file.originalFilename.substring(file.originalFilename.lastIndexOf('.')+1)
+		failIf(config, messageSource.getMessage("mongodb-gridfs.upload.unauthorizedExtension", [fileExtension, config.allowedExtensions] as Object[], "The file you sent has an unauthorized extension ({0}). Allowed extensions for this upload are {1}", request.locale), [id: params.id]) {
+			!config.allowedExtensions.contains(fileExtension)
+		}
+	}
+	
+	private def failBecauseFileTooBig(file, config) {
+		def maxSizeInKb = (int) (config.maxSize ?: 0)/1024
+		failIf(config, messageSource.getMessage("mongodb-gridfs.upload.fileBiggerThanAllowed", [maxSizeInKb] as Object[], "Sent file is bigger than allowed. Max file size is {0} kb", request.locale), [id: params.id]) {
+			def limit = Math.max(config.maxSize ?: 0, 0)
+			limit && file.size > limit
+		}
+	}
+
+	private def failIf(config, msg, params=[:], failureCondition) {
+		if (failureCondition()) {
+			log.debug msg
+			flash.message = msg
+			redirect controller:	config.controllers.errorController,
+					action:			config.controllers.errorAction,
+					params:			params
+			return true
+		}
+		false
+	}
+	
+	private def failBecauseFileInvalid(file, config) {
+		failBecauseFileMissing(file, config) ||
+		failBecauseUnauthorizedFileExtension(file, config) ||
+		failBecauseFileTooBig(file, config)
+	}
+	
+	private def isEmptyFile(file) {
+		!file || file.size == 0
+	}
 
 }
