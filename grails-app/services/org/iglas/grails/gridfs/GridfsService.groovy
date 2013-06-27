@@ -100,6 +100,13 @@ class GridfsService {
 		metadata.put("idparent",params.idparent)
 		metadata.put("originalFilename",file.originalFilename.toLowerCase())
 		metadata.put("fileExtension",fileExtension.toLowerCase())
+		
+		String newFileName = (params.idparent + "_" + file.originalFilename).toLowerCase()
+		if (params?.parentclass)
+		{
+			newFileName = params.parentclass + "_" + newFileName
+			metadata.put("parentclass",params.parentclass)
+		}
 
 		if(params?.text)
 			metadata.put("text",params?.text)

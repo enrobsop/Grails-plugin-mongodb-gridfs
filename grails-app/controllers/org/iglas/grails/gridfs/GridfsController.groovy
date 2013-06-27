@@ -43,6 +43,14 @@ class GridfsController {
 			!config.allowedExtensions.contains(fileExtension)
 		}
 	}
+	
+	private def failBecauseFileTooBig(file, config) {
+		def maxSizeInKb = (int) (config.maxSize ?: 0)/1024
+		failIf(config, messageSource.getMessage("mongodb-gridfs.upload.fileBiggerThanAllowed", [maxSizeInKb] as Object[], "Sent file is bigger than allowed. Max file size is {0} kb", request.locale), [id: params.id]) {
+			def limit = Math.max(config.maxSize ?: 0, 0) 
+			limit && file.size > limit
+		}
+	}
 
 	private def failIf(config, msg, params=[:], failureCondition) {
 		if (failureCondition()) {
@@ -56,6 +64,12 @@ class GridfsController {
 		false
 	}
 	
+	private def failBecauseFileInvalid(file, config) {
+		failBecauseFileMissing(file, config) || 
+		failBecauseUnauthorizedFileExtension(file, config) ||
+		failBecauseFileTooBig(file, config)
+	}
+	
 	private def isEmptyFile(file) {
 		!file || file.size == 0
 	}
@@ -67,30 +81,13 @@ class GridfsController {
         if (failBecauseIdParentMissing(config)) return
 		
         def file = request.getFile("file")
-		if (failBecauseFileMissing(file, config)) return
-		
-		if (failBecauseUnauthorizedFileExtension(file, config)) return
-		
-        /*********************
-         check file size
-         **********************/
-        if (config.maxSize) { //if maxSize config exists
-            def maxSizeInKb = ((int) (config.maxSize/1024))
-            if (file.size > config.maxSize) { //if filesize is bigger than allowed
-                log.debug "FileUploader plugin received a file bigger than allowed. Max file size is ${maxSizeInKb} kb"
-                flash.message = messageSource.getMessage("mongodb-gridfs.upload.fileBiggerThanAllowed", [maxSizeInKb] as Object[], request.locale)
-                redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.id
-                return            }
-        }
-
+		if (failBecauseFileInvalid(file, config)) return
 		
         String newFileName = (params.idparent + "_" + file.originalFilename).toLowerCase()
         if (params?.parentclass)
         {
             newFileName = params.parentclass + "_" + newFileName
-            metadata.put("parentclass",params.parentclass)
         }
-
 
         if(!gridfsService.exists(config, newFileName)){
 			

@@ -7,8 +7,7 @@ import org.iglas.grails.utils.ConfigHelper
 import org.springframework.mock.web.MockMultipartFile
 
 import spock.lang.Shared
-
-import com.mongodb.gridfs.GridFSInputFile
+import spock.lang.Unroll
 
 @TestFor(GridfsController)
 class GridfsControllerSpec extends UnitSpec {
@@ -98,6 +97,67 @@ class GridfsControllerSpec extends UnitSpec {
 			response.redirectUrl == "/error/index/$paramId"
 			// compare with redirectUrl for missing file... should they use the same ID?
 	}
+	
+	def "upload should fail when the file size exceeds the max size"() {
+		given: "a file size limit"
+			def KB = 1024
+			def theSizeLimit = 123 * KB 
+			configureWith([maxSize: theSizeLimit])
+		and: "a file that is too big"
+			def tooBig	= theSizeLimit + 1
+			def theData	= new byte[tooBig]
+			def theFile	= new MockMultipartFile('file', "aFile.jpg", 'image/jpeg', theData)
+			request.addFile(theFile)
+		and: "the other required params"
+			def theId = "anId"
+			params.idparent = theId
+			def paramId = "123"
+			params.id = paramId
+
+		when: "upload is attempted"
+			controller.upload()
+			
+		then: "an error message is given"
+			flash.message != null
+			flash.message =~ ~/(?i).*file size*/
+			flash.message =~ ~/(?i).*${theSizeLimit / KB}.*/
+		and: "the client is redirected to the error controller"
+			response.redirectUrl == "/error/index/$paramId"
+			// compare with redirectUrl for missing file... should they use the same ID?
+	}
+
+	@Unroll	
+	def "file upload should not check the maxSize when the limit is #theMaxSize"() {
+		given: "a file size limit"
+			configureWith([maxSize: theMaxSize])
+		and: "a file with data"
+			def MB		= 1024 * 1000
+			def theData	= new byte[2 * MB]
+			def theFile	= new MockMultipartFile('file', "aFile.jpg", 'image/jpeg', theData)
+			request.addFile(theFile)
+		and: "the other required params"
+			def theId = "anId"
+			params.idparent = theId
+			def paramId = "123"
+			params.id = paramId
+		and: "file is added okay"
+			def theGridFile = []
+			gridfsService.addToGridFS(_,_,_,_) >> theGridFile
+		and: "upload access is given"
+			gridfsService.attemptUpload(_, _) >> [isAllowed: true, msg: null]
+
+		when: "upload is attempted"
+			controller.upload()
+			
+		then: "no error message is given"
+			flash.message == null
+		and: "the client is redirected to the success controller"
+			response.redirectUrl == "/home/index"
+			
+		where:
+			theMaxSize << [0, -1]
+	}
+
 	
 	def "upload should forward to the successController when successType is 'forward'"() {
 		
