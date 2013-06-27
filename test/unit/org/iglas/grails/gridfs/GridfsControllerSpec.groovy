@@ -57,10 +57,9 @@ class GridfsControllerSpec extends UnitSpec {
 		
 		given: "an empty file"
 			def theFile = new MockMultipartFile('file', 'empty.jpg', 'image/jpeg', '' as byte[])
-			theFile.size() >> 0
 			request.addFile(theFile)
 
-		and: "the other rrequired params"
+		and: "the other required params"
 			def theId = "anId"
 			params.idparent = theId
 			
@@ -72,7 +71,32 @@ class GridfsControllerSpec extends UnitSpec {
 			flash.message =~ ~/(?i).*no file.*/
 		and: "the client is redirected to the error controller"
 			response.redirectUrl == "/error/index/$theId"
-							
+			// compare with redirectUrl for invalid file extension... should they use the same ID?			
+	}
+	
+	def "upload should fail when file extension is not on allowed list"() {
+		
+		given: "a file with a disallowed extension"
+			def disallowedExtension	= "bad"
+			def theFile				= new MockMultipartFile('file', "aFile.$disallowedExtension", 'image/jpeg', '123' as byte[])
+			request.addFile(theFile)
+
+		and: "the other required params"
+			def theId = "anId"
+			params.idparent = theId
+			def paramId = "123"
+			params.id = paramId
+		
+		when: "upload is attempted"
+			controller.upload()
+			
+		then: "an error message is given"
+			flash.message != null
+			flash.message =~ ~/(?i).*unauthorized extension.*${disallowedExtension}.*/
+			flash.message =~ ~/(?i).*allowed extensions.*jpg.*/
+		and: "the client is redirected to the error controller"
+			response.redirectUrl == "/error/index/$paramId"
+			// compare with redirectUrl for missing file... should they use the same ID?
 	}
 	
 	def "upload should forward to the successController when successType is 'forward'"() {

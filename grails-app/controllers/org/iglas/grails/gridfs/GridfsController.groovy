@@ -32,16 +32,25 @@ class GridfsController {
 	}
 	
 	private def failBecauseFileMissing(file, config) {		
-		failIf(config, messageSource.getMessage("mongodb-gridfs.upload.nofile", null, "No file was found with id {0}. Please check your link.", request.locale)) {
+		failIf(config, messageSource.getMessage("mongodb-gridfs.upload.nofile", null, "No file was found with id {0}. Please check your link.", request.locale), [id: params.idparent]) {
 			isEmptyFile(file)	
 		}
 	}
-	
-	private def failIf(config, msg, failureCondition) {
+
+	private def failBecauseUnauthorizedFileExtension(file, config) {
+		def fileExtension = file.originalFilename.substring(file.originalFilename.lastIndexOf('.')+1)
+		failIf(config, messageSource.getMessage("mongodb-gridfs.upload.unauthorizedExtension", [fileExtension, config.allowedExtensions] as Object[], "The file you sent has an unauthorized extension ({0}). Allowed extensions for this upload are {1}", request.locale), [id: params.id]) {
+			!config.allowedExtensions.contains(fileExtension)
+		}
+	}
+
+	private def failIf(config, msg, params=[:], failureCondition) {
 		if (failureCondition()) {
 			log.debug msg
 			flash.message = msg
-			redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.idparent
+			redirect controller:	config.controllers.errorController,
+					action:			config.controllers.errorAction, 
+					params:			params
 			return true
 		}
 		false
@@ -58,24 +67,10 @@ class GridfsController {
         if (failBecauseIdParentMissing(config)) return
 		
         def file = request.getFile("file")
-		
 		if (failBecauseFileMissing(file, config)) return
 		
-
-        /***********************
-         check extensions
-         ************************/
-        def fileExtension = file.originalFilename.substring(file.originalFilename.lastIndexOf('.')+1)
-        if (!config.allowedExtensions[0].equals("*")) {
-            if (!config.allowedExtensions.contains(fileExtension)) {
-                def msg = messageSource.getMessage("mongodb-gridfs.upload.unauthorizedExtension", [fileExtension, config.allowedExtensions] as Object[], request.locale)
-                log.debug msg
-                flash.message = msg
-                redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.id
-                return
-            }
-        }
-
+		if (failBecauseUnauthorizedFileExtension(file, config)) return
+		
         /*********************
          check file size
          **********************/
