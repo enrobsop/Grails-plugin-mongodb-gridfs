@@ -189,16 +189,20 @@ class UploadFileCommandSpec extends UnitSpec {
 			)
 		and: "a gridFS file"
 			def gfsFile = Mock(GridFSFile)
+		and: "an expected result following upload"
+			def expectedUploadResult = [isAllowed: true, msg: null]
 			
 		when: "adding the file to gridFS"
-			def result = uploadCommand.addToGridFS()
+			def result = uploadCommand.createTargetFile()
 		
 		then: "the check is correctly delegated"
 			1 * gridfsService.addToGridFS(myConfig, multipartFile, "myid_myfile.jpg") >> gfsFile
-		then: "the file is configured with metadata"
+		and: "the file is configured with metadata"
 			1 * gfsFile.setMetaData(uploadCommand.metadata)
+		and: "an attempt is made to upload the file"
+			1 * gridfsService.attemptUpload(myConfig, gfsFile) >> expectedUploadResult
 		and: "the correct result is returned"
-			result == gfsFile
+			result == expectedUploadResult
 			
 	}
 

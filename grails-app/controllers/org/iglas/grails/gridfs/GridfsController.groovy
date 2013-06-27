@@ -39,8 +39,7 @@ class GridfsController {
 
         if(!command.targetFileExists()){
 			
-			def gfsFile 	= command.addToGridFS()
-			def checkUpload	= gridfsService.attemptUpload(config, gfsFile)
+			def checkUpload = command.createTargetFile()
 			
             if (checkUpload.isAllowed)
             {
