@@ -25,17 +25,29 @@ class GridfsController {
         GridfsService.list(params)
     }
 	
-	private def redirectBecauseIdParentMissing(config) {
-        if(!params?.idparent) {
-			log.debug "Input params is bad"
-			flash.message = messageSource.getMessage("mongodb-gridfs.paramsbad", [params.idparent] as Object[], "Invalid params", request.locale)
-			redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.id
+	private def failBecauseIdParentMissing(config) {
+		failIf(config, messageSource.getMessage("mongodb-gridfs.paramsbad", [params.idparent] as Object[], "Invalid params", request.locale)) {
+			!params.idparent
+		}
+	}
+	
+	private def failBecauseFileMissing(file, config) {		
+		failIf(config, messageSource.getMessage("mongodb-gridfs.upload.nofile", null, "No file was found with id {0}. Please check your link.", request.locale)) {
+			isEmptyFile(file)	
+		}
+	}
+	
+	private def failIf(config, msg, failureCondition) {
+		if (failureCondition()) {
+			log.debug msg
+			flash.message = msg
+			redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.idparent
 			return true
-        }
+		}
 		false
 	}
 	
-	private def isEmptyFile() {
+	private def isEmptyFile(file) {
 		!file || file.size == 0
 	}
 
@@ -43,17 +55,12 @@ class GridfsController {
 
         def config = configHelper.getConfig(params)
 		
-        if (redirectBecauseIdParentMissing(config)) return
+        if (failBecauseIdParentMissing(config)) return
 		
         def file = request.getFile("file")
 		
-        if (isEmptyFile(file)) {
-            def msg = messageSource.getMessage("mongodb-gridfs.upload.nofile", null, "No file was found with id {0}. Please check your link.", request.locale)
-            log.debug msg
-            flash.message = msg
-            redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.idparent
-            return
-        }
+		if (failBecauseFileMissing(file, config)) return
+		
 
         /***********************
          check extensions

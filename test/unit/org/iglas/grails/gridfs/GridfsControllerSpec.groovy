@@ -35,6 +35,46 @@ class GridfsControllerSpec extends UnitSpec {
 			response.redirectUrl == "/error/index"
 	}
 	
+	def "upload should fail when file is missing"() {
+		
+		given: "no file"
+		and: "the other rrequired params"
+			def theId = "anId"
+			params.idparent = theId
+		
+		when: "upload is attempted"
+			controller.upload()
+			
+		then: "an error message is given"
+			flash.message != null
+			flash.message =~ ~/(?i).*no file.*/
+		and: "the client is redirected to the error controller"
+			response.redirectUrl == "/error/index/$theId"
+
+	}
+	
+	def "upload should fail when file is empty"() {
+		
+		given: "an empty file"
+			def theFile = new MockMultipartFile('file', 'empty.jpg', 'image/jpeg', '' as byte[])
+			theFile.size() >> 0
+			request.addFile(theFile)
+
+		and: "the other rrequired params"
+			def theId = "anId"
+			params.idparent = theId
+			
+		when: "upload is attempted"
+			controller.upload()
+			
+		then: "an error message is given"
+			flash.message != null
+			flash.message =~ ~/(?i).*no file.*/
+		and: "the client is redirected to the error controller"
+			response.redirectUrl == "/error/index/$theId"
+							
+	}
+	
 	def "upload should forward to the successController when successType is 'forward'"() {
 		
 		given: "a mock file"
