@@ -1,7 +1,6 @@
 package org.iglas.grails.gridfs
 
 import org.codehaus.groovy.grails.validation.Validateable
-import org.iglas.grails.utils.ConfigHelper
 import org.springframework.web.multipart.MultipartFile
 
 import com.mongodb.BasicDBObject
@@ -24,7 +23,10 @@ class UploadFileCommand {
 	String successController
 	String successAction
 	String successType
-	
+	String errorController
+	String errorAction
+	String errorType
+
 	static constraints = {
 		file				nullable:false
 		idparent 			nullable:false
@@ -34,6 +36,9 @@ class UploadFileCommand {
 		successController	nullable:true
 		successAction		nullable:true
 		successType			nullable:true
+		errorController		nullable:true
+		errorAction			nullable:true
+		errorType			nullable:true
 		id					nullable:true
 	}
 	
@@ -83,4 +88,52 @@ class UploadFileCommand {
 		gridfsService.attemptUpload(config, gfsFile)
 	}
 	
+	void setSuccessController(String value) {
+		successController = value?.trim()
+	}
+	
+	String getSuccessController() {
+		successController ?: config?.controllers?.successController
+	}
+	
+	void setSuccessAction(String value) {
+		successAction = value?.trim()
+	}
+	
+	String getSuccessAction() {
+		successAction ?: config?.controllers?.successAction
+	}
+
+	void setSuccessType(String value) {
+		successType = value?.trim()
+	}
+	
+	String getSuccessType() {
+		successType ?: config?.controllers?.successType
+	}
+	
+	void setErrorController(String value) {
+		errorController = value?.trim()
+	}
+	
+	String getErrorController() {
+		errorController ?: config?.controllers?.errorController
+	}
+	
+	void setErrorAction(String value) {
+		errorAction = value?.trim()
+	}
+	
+	String getErrorAction() {
+		errorAction ?: config?.controllers?.errorAction
+	}
+
+	void setErrorType(String value) {
+		errorType = value?.trim()
+	}
+	
+	String getErrorType() {
+		errorType ?: config?.controllers?.errorType
+	}
+
 }

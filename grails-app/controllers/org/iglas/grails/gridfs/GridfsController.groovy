@@ -39,23 +39,28 @@ class GridfsController {
 			
             if (checkUpload.isAllowed)
             {
-				if (config.controllers.successType == "forward") {
-					forward controller: config.controllers.successController, action: config.controllers.successAction
-				} else {
-                	redirect controller: config.controllers.successController, action: config.controllers.successAction
+				switch(command.successType) {
+					case "forward": 
+						forward controller: command.successController, action: command.successAction
+						break;
+					case "chain":
+						chain controller: command.successController, action: command.successAction
+						break;
+					default:
+						redirect controller: command.successController, action: command.successAction
 				}
             }
             else
             {
                 log.debug "Access deny upload:" + checkUpload?.message
-                flash.message = messageSource.getMessage("mongodb-gridfs.get.accessdeny", [access.message] as Object[], request.locale)
+                flash.message = message("mongodb-gridfs.get.accessdeny", [access.message] as Object[], request.locale)
                 redirect controller: config.accessController, action: config.accessAction
             }
 
         } else {
             log.debug "Filename for 'idparent'=${command.originalFilename} is busy"
-            flash.message = messageSource.getMessage("mongodb-gridfs.upload.nameinbusy", [command.originalFilename] as Object[], request.locale)
-            redirect controller: config.controllers.errorController, action: config.controllers.errorAction
+            flash.message = message("mongodb-gridfs.upload.nameinbusy", [command.originalFilename] as Object[], request.locale)
+            redirect controller: command.errorController, action: command.errorAction
         }
 
     }
@@ -134,15 +139,14 @@ class GridfsController {
     }
 
 	private def failBecauseIdParentMissing(command) {
-		def config = command.config
-		failIf(config, 
-			messageSource.getMessage("mongodb-gridfs.paramsbad", [command.idparent] as Object[], "Invalid params", request.locale)) {
+		failIf(command, 
+			message("mongodb-gridfs.paramsbad", [command.idparent] as Object[], "Invalid params")) {
 			!command.idparent
 		}
 	}
 	
 	private def failBecauseFileMissing(command) {
-		failIf(command.config, messageSource.getMessage("mongodb-gridfs.upload.nofile", null, "No file was found with id {0}. Please check your link.", request.locale), [id: command.idparent]) {
+		failIf(command, message("mongodb-gridfs.upload.nofile", null, "No file was found with id {0}. Please check your link."), [id: command.idparent]) {
 			isEmptyFile(command.file)
 		}
 	}
@@ -150,7 +154,7 @@ class GridfsController {
 	private def failBecauseUnauthorizedFileExtension(command) {
 		def config = command.config
 		def fileExtension = command.fileExtension
-		failIf(config, messageSource.getMessage("mongodb-gridfs.upload.unauthorizedExtension", [fileExtension, config.allowedExtensions] as Object[], "The file you sent has an unauthorized extension ({0}). Allowed extensions for this upload are {1}", request.locale), [id: command.id]) {
+		failIf(command, message("mongodb-gridfs.upload.unauthorizedExtension", [fileExtension, config.allowedExtensions] as Object[], "The file you sent has an unauthorized extension ({0}). Allowed extensions for this upload are {1}"), [id: command.id]) {
 			!config.allowedExtensions.contains(command.fileExtension)
 		}
 	}
@@ -159,18 +163,18 @@ class GridfsController {
 		def config	= command.config
 		def file	= command.file
 		def maxSizeInKb = (int) (config.maxSize ?: 0)/1024
-		failIf(config, messageSource.getMessage("mongodb-gridfs.upload.fileBiggerThanAllowed", [maxSizeInKb] as Object[], "Sent file is bigger than allowed. Max file size is {0} kb", request.locale), [id: command.id]) {
+		failIf(command, message("mongodb-gridfs.upload.fileBiggerThanAllowed", [maxSizeInKb] as Object[], "Sent file is bigger than allowed. Max file size is {0} kb"), [id: command.id]) {
 			def limit = Math.max(config.maxSize ?: 0, 0)
 			limit && file.size > limit
 		}
 	}
 
-	private def failIf(config, msg, params=[:], failureCondition) {
+	private def failIf(command, msg, params=[:], failureCondition) {
 		if (failureCondition()) {
 			log.debug msg
 			flash.message = msg
-			redirect controller:	config.controllers.errorController,
-					action:			config.controllers.errorAction,
+			redirect controller:	command.errorController,
+					action:			command.errorAction,
 					params:			params
 			return true
 		}
@@ -181,6 +185,10 @@ class GridfsController {
 		failBecauseFileMissing(command) ||
 		failBecauseUnauthorizedFileExtension(command) ||
 		failBecauseFileTooBig(command)
+	}
+	
+	private def message(code, args, defaultMsg, locale=request.locale) {
+		messageSource.getMessage(code, args, defaultMsg, locale)
 	}
 	
 	private def isEmptyFile(file) {

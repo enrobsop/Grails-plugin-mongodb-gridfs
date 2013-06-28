@@ -205,6 +205,63 @@ class UploadFileCommandSpec extends UnitSpec {
 			result == expectedUploadResult
 			
 	}
+	
+	@Unroll
+	def "the command object should fallback to the config object conrrectly for '#field'='#value'"() {
+		
+		given: "a config object containing default values"
+			def defaultConfig = [
+				allowedExtensions:	["jpg"],
+				db:					[host: "mongoHost"],
+				controllers:		[
+					successController:	"configSuccess",
+					successAction:		"configSuccessAction",
+					successType:		"chain",
+					errorController:	"configError",
+					errorAction:		"configErrorAction",
+					errorType:			"redirect",
+				]
+			]
+			
+		when: "a command object containing override values is created"
+			def uploadCommand = new UploadFileCommand(config: defaultConfig)
+			uploadCommand."${field}" = value
+		
+		then: "the command object uses the default value from config when no value is found"
+			uploadCommand."${field}" == expectedValue
+			
+		where:
+			field				| value			| expectedValue
+			"successController"	| "mySuccess"	| "mySuccess"
+			"successController"	| null			| "configSuccess"
+			"successController"	| ""			| "configSuccess"
+			"successController"	| " "			| "configSuccess"
+			
+			"successAction"		| "success"		| "success"
+			"successAction"		| null			| "configSuccessAction"
+			"successAction"		| ""			| "configSuccessAction"
+			"successAction"		| " "			| "configSuccessAction"
+			
+			"successType"		| "forward"		| "forward"
+			"successType"		| null			| "chain"
+			"successType"		| ""			| "chain"
+			"successType"		| " "			| "chain"
+			
+			"errorController"	| "myError"		| "myError"
+			"errorController"	| null			| "configError"
+			"errorController"	| ""			| "configError"
+			"errorController"	| " "			| "configError"
+			
+			"errorAction"		| "error"		| "error"
+			"errorAction"		| null			| "configErrorAction"
+			"errorAction"		| ""			| "configErrorAction"
+			"errorAction"		| " "			| "configErrorAction"
+			
+			"errorType"			| "forward"		| "forward"
+			"errorType"			| null			| "redirect"
+			"errorType"			| ""			| "redirect"
+			"errorType"			| " "			| "redirect"
 
+	}
 
 }

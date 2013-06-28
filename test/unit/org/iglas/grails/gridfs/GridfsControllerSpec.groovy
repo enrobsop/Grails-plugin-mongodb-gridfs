@@ -175,7 +175,8 @@ class GridfsControllerSpec extends UnitSpec {
 			theMaxSize << [0, -1]
 	}
 
-	def "upload should forward to the successController when successType is 'forward'"() {
+	@Unroll
+	def "controller should send correct response when successType is '#successType'"() {
 		
 		given: "an uploaded file"
 			def theFileExtension	= "jpg"
@@ -188,18 +189,10 @@ class GridfsControllerSpec extends UnitSpec {
 				gridfsService:		gridfsService,
 				idparent: 			"testUser",
 				file:				multipartFile,
-				successController: 	"mySuccessController",
-				successAction:		"theAction",
-				successType: 		"forward"
+				successController: 	"success",
+				successAction:		"onupload",
+				successType: 		successType
 			)
-		and: "a configuration"
-			configureWith([
-				controllers:		[
-					successController:	"home",
-					successAction:		"afterUpload",
-					successType:		"forward"
-				]
-			])
 		
 		and: "file is added okay"
 			def theGridFile = Mock(GridFSFile)
@@ -212,11 +205,18 @@ class GridfsControllerSpec extends UnitSpec {
 		
 		then: "there are no error messages"
 			flash.message == null
-		and: "the request should be forwarded to the successController"
-			assert response.forwardedUrl == "/grails/home/afterUpload.dispatch"
+		and: "the request should be forwarded/redirected to the correct controller"
+			response.redirectUrl == redirectUrl
+			
+		where:
+			successType	| redirectUrl			| forwardedUrl
+			null		| "/success/onupload"	| null
+			"redirect"	| "/success/onupload"	| null
+			"chain"		| "/success/onupload"	| null
+			"forward"	| null					| "/grails/success/onupload.dispatch"
 		
 	}
-	
+
 	private def configureWith(options=[:]) {
 		def defaultConfig = [
 			allowedExtensions:	["jpg"],
