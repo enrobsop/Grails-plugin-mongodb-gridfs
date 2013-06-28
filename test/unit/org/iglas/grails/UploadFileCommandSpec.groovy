@@ -263,5 +263,89 @@ class UploadFileCommandSpec extends UnitSpec {
 			"errorType"			| " "			| "redirect"
 
 	}
+	
+	@Unroll
+	def "should correctly determine whether the file is empty when fileIsNull=#isFileNull and fileSize=#fileSize"() {
+		
+		given: "an uploaded file"
+			def multipartFile
+			if (!isFileNull) {
+				multipartFile = Mock(MultipartFile)
+				multipartFile.getSize() >> fileSize
+			}
+			
+		when: "a command object is created"
+			def command = new UploadFileCommand(file: multipartFile)
+			
+		then: "it correctly determines whether the file is empty"
+			command.isFileEmpty() == isEmpty
+		
+		where:
+			isFileNull	| fileSize	| isEmpty 
+			false		| 0			| true
+			false		| 1			| false
+			false 		|-1			| true
+			true		| 0			| true
+			true		| 1			| true
+			true 		|-1			| true
+				
+	}
+	
+	@Unroll
+	def "should correctly determine whether an extension is allowed when file=#originalFilename and allowedExtensions=[#allowedExtensions]"() {
+		
+		given: "a config object defining the allowed extensions"
+			def theConfig = [allowedExtensions: allowedExtensions?.split(",")]
+		and: "an uploaded file"
+			def multipartFile = Mock(MultipartFile)
+			multipartFile.getOriginalFilename() >> originalFilename
+		
+		when: "a command object is created"
+			def command = new UploadFileCommand(file: multipartFile, config: theConfig)
+
+		then: "the command correctly determines whether a file extension is allowed"
+			command.isExtensionAllowed() == isAllowed
+		
+		where:
+			originalFilename	| allowedExtensions	| isAllowed
+			"image.jpg"			| "jpg"				| true
+			"image.jpg "		| "jpg"				| true
+			" image.jpg"		| "jpg"				| true
+			"image.jpg"			| "gif,jpg"			| true
+			"image.jpg.gif"		| "gif"				| true
+			"image.jpg"			| "gif"				| false
+			"image.gif.jpg"		| "gif"				| false
+			"image"				| "gif"				| false
+			""					| "gif"				| false
+			" "					| "gif"				| false
+			null				| "gif"				| false
+			"image.jpg"			| ""				| false
+			"image.jpg"			| " "				| false
+			"image.jpg"			| null				| false
+			
+	}
+
+	@Unroll
+	def "should correctly determine whether a file is too big when fileSize=#fileSize and maxSize=#maxSize"() {
+		
+		given: "a config object defining the allowed extensions"
+			def theConfig = [maxSize: maxSize]
+		and: "an uploaded file"
+			def multipartFile = Mock(MultipartFile)
+			multipartFile.getSize() >> fileSize 
+			
+		when: "a command object is created"
+			def command = new UploadFileCommand(file: multipartFile, config: theConfig)
+		
+		then: "the command correctly determines whether a file is too big"
+			command.isFileTooBig() == isTooBig
+			
+		where:
+			maxSize	| fileSize	| isTooBig
+			100		| 0			| false
+			100		| 100		| false
+			100		| 101		| true
+			0		| 101		| false
+	}
 
 }

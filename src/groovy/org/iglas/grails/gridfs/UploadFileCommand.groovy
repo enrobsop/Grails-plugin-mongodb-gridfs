@@ -11,6 +11,7 @@ class UploadFileCommand {
 
 	transient def config
 	transient def gridfsService
+	transient def messageSource
 	
 	String 			idparent
 	MultipartFile	file
@@ -51,7 +52,9 @@ class UploadFileCommand {
 	}
 	
 	def getFileExtension() {
-		file.originalFilename.substring(file.originalFilename.lastIndexOf('.')+1)
+		def filename = file?.originalFilename?.trim()
+		def lastDotIndex = filename?.lastIndexOf('.')		
+		(lastDotIndex > 0) ? filename.substring(lastDotIndex+1) : null
 	}
 	
 	def getTargetFilename() {
@@ -86,6 +89,19 @@ class UploadFileCommand {
 		def gfsFile			= gridfsService.addToGridFS(config, file, gridFsFilename)
 		gfsFile.setMetaData(metadata)
 		gridfsService.attemptUpload(config, gfsFile)
+	}
+	
+	boolean isFileEmpty() {
+		!file || file.size <= 0
+	}
+	
+	boolean isFileTooBig() {
+		def hasSizeLimit = maxSize > 0
+		hasSizeLimit && !isFileEmpty() && file.size > maxSize 
+	}
+	
+	boolean isExtensionAllowed() {
+		config?.allowedExtensions?.contains(fileExtension)
 	}
 	
 	void setSuccessController(String value) {
@@ -134,6 +150,14 @@ class UploadFileCommand {
 	
 	String getErrorType() {
 		errorType ?: config?.controllers?.errorType
+	}
+	
+	def getAllowedExtensions() {
+		config?.allowedExtensions
+	}
+	
+	def getMaxSize() {
+		config?.maxSize ?: 0
 	}
 
 }

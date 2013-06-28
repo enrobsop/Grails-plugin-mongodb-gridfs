@@ -10,14 +10,10 @@ import com.mongodb.gridfs.GridFSInputFile
 class GridfsController {
 
 	def configHelper = new ConfigHelper()  // for easier testing
-	
 	def gridfsService
-	
-    //messagesource
     def messageSource
-
-    //defaultaction
     def defaultAction = "list"
+	
     def index(){
         redirect(action: "help")
     }
@@ -147,25 +143,22 @@ class GridfsController {
 	
 	private def failBecauseFileMissing(command) {
 		failIf(command, message("mongodb-gridfs.upload.nofile", null, "No file was found with id {0}. Please check your link."), [id: command.idparent]) {
-			isEmptyFile(command.file)
+			command.isFileEmpty()
 		}
 	}
 
 	private def failBecauseUnauthorizedFileExtension(command) {
 		def config = command.config
 		def fileExtension = command.fileExtension
-		failIf(command, message("mongodb-gridfs.upload.unauthorizedExtension", [fileExtension, config.allowedExtensions] as Object[], "The file you sent has an unauthorized extension ({0}). Allowed extensions for this upload are {1}"), [id: command.id]) {
-			!config.allowedExtensions.contains(command.fileExtension)
+		failIf(command, message("mongodb-gridfs.upload.unauthorizedExtension", [fileExtension, command.allowedExtensions] as Object[], "The file you sent has an unauthorized extension ({0}). Allowed extensions for this upload are {1}"), [id: command.id]) {
+			!command.isExtensionAllowed()
 		}
 	}
 	
 	private def failBecauseFileTooBig(command) {
-		def config	= command.config
-		def file	= command.file
-		def maxSizeInKb = (int) (config.maxSize ?: 0)/1024
+		def maxSizeInKb = (int) (command.maxSize ?: 0)/1024
 		failIf(command, message("mongodb-gridfs.upload.fileBiggerThanAllowed", [maxSizeInKb] as Object[], "Sent file is bigger than allowed. Max file size is {0} kb"), [id: command.id]) {
-			def limit = Math.max(config.maxSize ?: 0, 0)
-			limit && file.size > limit
+			command.isFileTooBig()
 		}
 	}
 
@@ -191,8 +184,4 @@ class GridfsController {
 		messageSource.getMessage(code, args, defaultMsg, locale)
 	}
 	
-	private def isEmptyFile(file) {
-		!file || file.size == 0
-	}
-
 }
