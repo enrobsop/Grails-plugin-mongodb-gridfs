@@ -8,10 +8,9 @@ import com.mongodb.DBObject
 
 @Validateable
 class UploadFileCommand {
-
+	
 	transient def config
 	transient def gridfsService
-	transient def messageSource
 	
 	String 			idparent
 	MultipartFile	file
