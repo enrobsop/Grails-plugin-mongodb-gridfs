@@ -112,7 +112,9 @@ class GridfsService {
         }
         gfsFiles
     }
-	// TODO change to instance method
+	/**
+	 *  @deprecated  {@link getByFilename} or {@link getById}
+	 */
     public static GridFSDBFile get(params) {
 		// TODO delegate according to parameters supplied
         def config = new UserConfig(configName).get(params)

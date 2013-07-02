@@ -5,19 +5,26 @@ import grails.test.mixin.*
 
 import org.bson.types.ObjectId
 
+import spock.lang.Shared
+import spock.lang.Unroll
+
 import com.mongodb.gridfs.GridFSDBFile
 
 @TestFor(GridfsService)
 class GridfsServiceSpec extends UnitSpec {
+	
+	@Shared def gridfsHelperService
+	
+	def setup() {
+		gridfsHelperService			= Mock(GridfsHelperService)
+		service.gridfsHelperService	= gridfsHelperService
+	}
 
 	def "can get a file by object ID"() {
 		
 		given: "a file id"
 			def theOid	= new ObjectId("51d2821703649df48c3edd5c")
 			def theFile	= Mock(GridFSDBFile)
-		and: "a mock filesystem"
-			def gridfsHelperService		= Mock(GridfsHelperService)
-			service.gridfsHelperService	= gridfsHelperService
 			
 		when: "attempt to get the file by ID"
 			def found = service.getById(theOid)
@@ -36,11 +43,8 @@ class GridfsServiceSpec extends UnitSpec {
 		given: "a file id"
 			def theFilename	= "myid_myimage.jpg"
 			def theFile		= Mock(GridFSDBFile)
-		and: "a mock filesystem"
-			def gridfsHelperService		= Mock(GridfsHelperService)
-			service.gridfsHelperService	= gridfsHelperService
 			
-		when: "attempt to get the file by ID"
+		when: "attempt to get the file using the filename"
 			def found = service.getByFilename(theFilename)
 			
 		then: "the correct file is returned"
@@ -51,5 +55,5 @@ class GridfsServiceSpec extends UnitSpec {
 			1 * gridfsHelperService.findOne(theFilename) >> theFile
 		
 	}
-
+	
 }
