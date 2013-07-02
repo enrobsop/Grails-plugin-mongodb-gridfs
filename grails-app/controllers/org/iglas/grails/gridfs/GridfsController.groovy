@@ -37,7 +37,7 @@ class GridfsController {
             {
 				switch(command.successType) {
 					case "forward": 
-						forward controller: command.successController, action: command.successAction, params: [fileId: command.id]
+						forward controller: command.successController, action: command.successAction, params: [fileId: command.targetFileId]
 						break;
 					case "chain":
 						chain controller: command.successController, action: command.successAction

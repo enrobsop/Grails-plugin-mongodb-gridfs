@@ -4,6 +4,7 @@ import grails.plugin.spock.UnitSpec
 import grails.test.mixin.*
 import grails.test.mixin.web.ControllerUnitTestMixin
 
+import org.bson.types.ObjectId
 import org.iglas.grails.utils.ConfigHelper
 import org.springframework.web.multipart.MultipartFile
 
@@ -196,6 +197,7 @@ class GridfsControllerSpec extends UnitSpec {
 		
 		and: "file is added okay"
 			def theGridFile = Mock(GridFSFile)
+			theGridFile.getId() >> new ObjectId("51d319ca0364087b266e6f19")
 			gridfsService.addToGridFS(_,_,_) >> theGridFile
 		and: "upload access is given"
 			gridfsService.attemptUpload(_, _) >> [isAllowed: true, msg: null]
@@ -208,14 +210,13 @@ class GridfsControllerSpec extends UnitSpec {
 		and: "the request should be forwarded/redirected to the correct controller"
 			response.redirectUrl	== redirectUrl
 			response.forwardedUrl	== forwardedUrl
-		// TODO Figure out how to test that 'fileId' param is set when forwarding.
 			
 		where:
 			successType	| redirectUrl			| forwardedUrl
 			null		| "/success/onupload"	| null
 			"redirect"	| "/success/onupload"	| null
 			"chain"		| "/success/onupload"	| null
-			"forward"	| null					| "/grails/success/onupload.dispatch?"
+			"forward"	| null					| "/grails/success/onupload.dispatch?fileId=51d319ca0364087b266e6f19"
 		
 	}
 
