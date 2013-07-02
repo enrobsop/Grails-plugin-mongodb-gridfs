@@ -206,14 +206,16 @@ class GridfsControllerSpec extends UnitSpec {
 		then: "there are no error messages"
 			flash.message == null
 		and: "the request should be forwarded/redirected to the correct controller"
-			response.redirectUrl == redirectUrl
+			response.redirectUrl	== redirectUrl
+			response.forwardedUrl	== forwardedUrl
+		// TODO Figure out how to test that 'fileId' param is set when forwarding.
 			
 		where:
 			successType	| redirectUrl			| forwardedUrl
 			null		| "/success/onupload"	| null
 			"redirect"	| "/success/onupload"	| null
 			"chain"		| "/success/onupload"	| null
-			"forward"	| null					| "/grails/success/onupload.dispatch"
+			"forward"	| null					| "/grails/success/onupload.dispatch?"
 		
 	}
 
