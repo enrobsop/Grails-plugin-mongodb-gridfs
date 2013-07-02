@@ -89,6 +89,7 @@ class GridfsService {
 		}
 		[isAllowed: accessResult, msg: access?.message]
 	}
+	// TODO reconcile this with #getStore
 	private def getGridFS(config) {
 		Mongo mongo = new Mongo(config.db.host)
 		DB db  = mongo.getDB(config.db.name)
@@ -131,21 +132,18 @@ class GridfsService {
         fileForOutput
     }
 	public GridFSDBFile getByFilename(filename) {
-		GridFSDBFile fileForOutput
-		try {
-			fileForOutput = gridfsHelperService.findOne(filename)
-		}catch (Exception e){
-			println(e.message)
-			fileForOutput = new GridFSDBFile()
-		}
-		fileForOutput
+		getByValue(filename)
 	}
 	public GridFSDBFile getById(ObjectId oid) {
+		getByValue(oid)
+	}
+	private GridFSDBFile getByValue(value) {
 		GridFSDBFile fileForOutput
 		try {
-			fileForOutput = gridfsHelperService.findOne(oid)
+			fileForOutput = gridfsHelperService.findOne(value)
 		}catch (Exception e){
-			println(e.message)
+			log.error e
+			e.printStackTrace()
 			fileForOutput = new GridFSDBFile()
 		}
 		fileForOutput
