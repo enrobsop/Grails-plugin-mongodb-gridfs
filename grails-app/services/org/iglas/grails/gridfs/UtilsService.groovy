@@ -1,36 +1,36 @@
 package org.iglas.grails.gridfs
 
-import com.mongodb.DBObject
-import com.mongodb.BasicDBObject
-import com.mongodb.Mongo
-import com.mongodb.DB
-import com.mongodb.gridfs.GridFS
-import com.mongodb.gridfs.GridFSFile
-import com.mongodb.gridfs.GridFSDBFile
-import pl.burningice.plugins.image.BurningImageService
+import org.bson.types.ObjectId
+import org.codehaus.groovy.grails.web.mapping.LinkGenerator
 import org.iglas.grails.utils.*
 
-import org.codehaus.groovy.grails.web.context.ServletContextHolder
-import org.codehaus.groovy.grails.web.mapping.LinkGenerator
-import org.codehaus.groovy.grails.web.taglib.GrailsTag
-import org.codehaus.groovy.grails.commons.GrailsApplication
-import org.codehaus.groovy.grails.commons.spring.GrailsApplicationContext
-import org.codehaus.groovy.grails.web.servlet.GrailsApplicationAttributes
-import org.springframework.context.ApplicationContext
+import pl.burningice.plugins.image.BurningImageService
+
+import com.mongodb.DBObject
+import com.mongodb.gridfs.GridFSDBFile
+import com.mongodb.gridfs.GridFSFile
 
 class UtilsService {
     // save last query total result
     static Integer total
     LinkGenerator  grailsLinkGenerator
+	def configHelper = new ConfigHelper()  // for easier testing
+	
+	def grailsApplication
+	def gridfsService
+	def burningImageService
+	
     UtilsService(){
-        ApplicationContext appCtx =  ServletContextHolder.getServletContext().getAttribute(GrailsApplicationAttributes.APPLICATION_CONTEXT)
-        grailsLinkGenerator = appCtx.getBean("grailsLinkGenerator")
+        grailsLinkGenerator = grailsApplication?.mainContext?.getBean("grailsLinkGenerator")
     }
+	String getIconForFile(ObjectId oid, def params=[:]) {
+		getIconForFile(gridfsService.getById(oid),params)
+	}
     String getIconForFile(String filename,def params=[:]){
         getIconForFile(GridfsService.get(filename: filename),params)
     }
     public String getIconForFile(GridFSFile file,def params=[:]){
-        def config = new UserConfig(GridfsService.configName).get(params)
+    	def config = configHelper.getConfig(params)
         String iconDir = config.iconsdir.toLowerCase()
         List imagesType = config.imagestype
         Map thumbConfig = config.thumbconfig
@@ -54,14 +54,13 @@ class UtilsService {
 
                 new File(prefix + config.tmpdir).mkdirs()
                 GridFSDBFile fileForTmp
-                fileForTmp = GridfsService.get(filename: file.filename)
+                fileForTmp = gridfsService.getByFilename(file.filename)
 
                 if(fileForTmp !=  null) {
                     if(!new File(prefix + tmpfile).isFile())
                         fileForTmp.writeTo(prefix + tmpfile)
-                    def imageBurning =  new BurningImageService()
                     String filenameForBurn =thumbConfig.x_size +"x" + thumbConfig.y_size + metadata.originalFilename.substring(0,metadata.originalFilename.lastIndexOf('.'))
-                    imageBurning.doWith(prefix + tmpfile,prefix + thumbdir)
+                    burningImageService.doWith(prefix + tmpfile,prefix + thumbdir)
                             .execute (filenameForBurn.toLowerCase(), {
                         it.scaleAccurate(thumbConfig.x_size, thumbConfig.y_size)
                     })
