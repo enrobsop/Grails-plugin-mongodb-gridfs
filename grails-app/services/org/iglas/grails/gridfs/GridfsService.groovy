@@ -1,5 +1,6 @@
 package org.iglas.grails.gridfs
 
+import org.bson.types.ObjectId
 import org.codehaus.groovy.grails.web.taglib.exceptions.GrailsTagException
 import org.iglas.grails.utils.UserConfig
 
@@ -13,8 +14,12 @@ import com.mongodb.gridfs.GridFSDBFile
 import com.mongodb.gridfs.GridFSInputFile
 
 class GridfsService {
+	
     public static total
     static String configName = "gridfsConfig"
+	
+	def gridfsHelperService
+	
     public static list(params) {
         def result = []
         def config = new UserConfig(configName).get(params)
@@ -121,6 +126,16 @@ class GridfsService {
         }
         fileForOutput
     }
+	public GridFSDBFile getById(ObjectId oid) {
+		GridFSDBFile fileForOutput
+		try {
+			fileForOutput = gridfsHelperService.findOne(oid)
+		}catch (Exception e){
+			println(e.message)
+			fileForOutput = new GridFSDBFile()
+		}
+		fileForOutput
+	}
     public static boolean remove(params){
         def config = new UserConfig(configName).get(params)
         String FileName = params.filename
