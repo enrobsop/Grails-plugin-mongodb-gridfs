@@ -5,12 +5,14 @@ import org.springframework.web.multipart.MultipartFile
 
 import com.mongodb.BasicDBObject
 import com.mongodb.DBObject
+import com.mongodb.gridfs.GridFSFile;
 
 @Validateable
 class UploadFileCommand {
 	
 	transient def config
 	transient def gridfsService
+	private transient def targetFile
 	
 	String 			idparent
 	MultipartFile	file
@@ -57,11 +59,11 @@ class UploadFileCommand {
 	}
 	
 	def getTargetFilename() {
-		String newFileName = (idparent + "_" + originalFilename).toLowerCase()
+		String newFileName = (idparent + "_" + originalFilename)
 		if (parentclass) {
 			newFileName = parentclass + "_" + newFileName
 		}
-		newFileName
+		newFileName.replaceAll(/\s*/, "").toLowerCase()
 	}
 	
 	def getMetadata() {
@@ -84,9 +86,9 @@ class UploadFileCommand {
 	}
 	
 	def createTargetFile() {
-		def gridFsFilename	= targetFilename.toLowerCase().replaceAll(/ /,"") // TODO Why? Should this be part of getTargetFilename?
-		def gfsFile			= gridfsService.addToGridFS(config, file, gridFsFilename)
+		def gfsFile	= gridfsService.addToGridFS(config, file, targetFilename)
 		gfsFile.setMetaData(metadata)
+		this.targetFile = gfsFile
 		gridfsService.attemptUpload(config, gfsFile)
 	}
 	
@@ -157,6 +159,14 @@ class UploadFileCommand {
 	
 	def getMaxSize() {
 		config?.maxSize ?: 0
+	}
+	
+	def getTargetFile() {
+		targetFile
+	}
+	
+	def getTargetFileId() {
+		targetFile?.getId().toString()
 	}
 
 }

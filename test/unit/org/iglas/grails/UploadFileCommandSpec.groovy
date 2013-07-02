@@ -44,9 +44,10 @@ class UploadFileCommandSpec extends UnitSpec {
 			uploadCommand.targetFilename == expectedNewFilename
 		
 		where:
-			scenario			| idparent	| parentclass	| originalFilename	| expectedNewFilename
-			"all atts defined"	| "myId"	| "User"		| "helloWorld.txt"	| "User_myid_helloworld.txt"
-			"no parent class"	| "myId"	| null			| "helloWorld.txt"	| "myid_helloworld.txt"
+			scenario					| idparent	| parentclass	| originalFilename				| expectedNewFilename
+			"all atts defined"			| "myId"	| "User"		| "helloWorld.txt"				| "user_myid_helloworld.txt"
+			"no parent class"			| "myId"	| null			| "helloWorld.txt"				| "myid_helloworld.txt"
+			"filename contains space"	| "myId"	| null			| " hello\tWorld Again.txt "	| "myid_helloworldagain.txt"
 			
 	}
 	
@@ -173,7 +174,6 @@ class UploadFileCommandSpec extends UnitSpec {
 			expectedResult << [true, false]
 	}
 	
-	@Unroll
 	def "should be able to add file to GridFS"() {
 		
 		given: "an uploaded file"
@@ -188,7 +188,9 @@ class UploadFileCommandSpec extends UnitSpec {
 				config:			myConfig
 			)
 		and: "a gridFS file"
-			def gfsFile = Mock(GridFSFile)
+			def gfsFile		= Mock(GridFSFile)
+			def aFileOid	= "ABC123bcafa123dae1"
+			gfsFile.getId() >> aFileOid
 		and: "an expected result following upload"
 			def expectedUploadResult = [isAllowed: true, msg: null]
 			
@@ -203,6 +205,9 @@ class UploadFileCommandSpec extends UnitSpec {
 			1 * gridfsService.attemptUpload(myConfig, gfsFile) >> expectedUploadResult
 		and: "the correct result is returned"
 			result == expectedUploadResult
+		and: "the gfsFile is stored in the command"
+			uploadCommand.targetFile		== gfsFile
+			uploadCommand.getTargetFileId()	== aFileOid
 			
 	}
 	
