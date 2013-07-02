@@ -1,12 +1,15 @@
 package org.iglas.grails.gridfs
 
+import org.bson.types.ObjectId
 import org.codehaus.groovy.grails.web.taglib.exceptions.GrailsTagException
 import org.iglas.grails.utils.*
 
 class GridfsTagLib {
+	
+	static namespace = 'gridfs'
 
-
-    static namespace = 'gridfs'
+	def configHelper = new ConfigHelper()
+	def utilsService
 
     static Long _byte  = 1
     static Long _kbyte = 1	*	1000
@@ -15,11 +18,18 @@ class GridfsTagLib {
     def getIcon = { attrs ->
         Integer x = attrs.x.toInteger()
         Integer y = attrs.y.toInteger()
-
-        out << '<img src="' + new UtilsService().getIconForFile(attrs.filename,[thumbconfig:[x_size:x,y_size:y]])
+		def imgSrc
+			
+		if (attrs.fileId) {
+			def oid = new ObjectId(attrs.fileId)
+			imgSrc = utilsService.getIconForFile(oid,[thumbconfig:[x_size:x,y_size:y]])			
+		} else if (attrs.filename) {
+			imgSrc = utilsService.getIconForFile(attrs.filename,[thumbconfig:[x_size:x,y_size:y]])
+		}
+        out << "<img src=\"$imgSrc\"" 
         if (attrs?.title)
             out << ' title="${attrs?.title}" '
-        out << '" />'
+        out << ' />'
     }
     def createLink = { attrs ->
         out << g.createLink(controller: "gridfs",action:"get" ,params: [filename:attrs.filename] )
@@ -55,7 +65,7 @@ class GridfsTagLib {
     }
 
     def form = { attrs, body ->
-        def config = new UserConfig(GridfsService.configName).get()
+		def config = configHelper.getConfig()
         //checking required fields
         if (!attrs.idparent) {
             def errorMsg = "'idparent' attribute not found in file-uploader form tag."
@@ -68,10 +78,12 @@ class GridfsTagLib {
         //case success
         def successAction = attrs.successAction? attrs.successAction : config.controllers.successAction
         def successController = attrs.successController? attrs.successController : config.controllers.successController
-
+		def successType = attrs.successType
+		
         //case error
         def errorAction = attrs.errorAction? attrs.errorAction :config.controllers.errorAction
         def errorController =  attrs.errorController? attrs.errorController : config.controllers.errorController
+     	def errorType = attrs.errorType
 
         def tagBody = new StringBuilder()
         tagBody.append(body())
@@ -83,8 +95,10 @@ class GridfsTagLib {
 
         tagBody.append("<input type='hidden' name='errorAction' value='${errorAction}' />")
         tagBody.append("<input type='hidden' name='errorController' value='${errorController}' />")
+        if (errorType) tagBody.append("<input type='hidden' name='errorType' value='${errorType}' />")
         tagBody.append("<input type='hidden' name='successAction' value='${successAction}' />")
         tagBody.append("<input type='hidden' name='successController' value='${successController}' />")
+		if (successType) tagBody.append("<input type='hidden' name='successType' value='${successType}' />")
 
         tagBody.append("""
                             <input type='file' name='file' />
