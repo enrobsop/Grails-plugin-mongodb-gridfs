@@ -15,7 +15,6 @@ class GridfsServiceSpec extends UnitSpec {
 		given: "a file id"
 			def theOid	= new ObjectId("51d2821703649df48c3edd5c")
 			def theFile	= Mock(GridFSDBFile)
-			theFile.getId() >> theOid
 		and: "a mock filesystem"
 			def gridfsHelperService		= Mock(GridfsHelperService)
 			service.gridfsHelperService	= gridfsHelperService
@@ -31,5 +30,26 @@ class GridfsServiceSpec extends UnitSpec {
 			1 * gridfsHelperService.findOne(theOid) >> theFile
 		
 	}		
-	
+
+	def "can get a file by filename"() {
+		
+		given: "a file id"
+			def theFilename	= "myid_myimage.jpg"
+			def theFile		= Mock(GridFSDBFile)
+		and: "a mock filesystem"
+			def gridfsHelperService		= Mock(GridfsHelperService)
+			service.gridfsHelperService	= gridfsHelperService
+			
+		when: "attempt to get the file by ID"
+			def found = service.getByFilename(theFilename)
+			
+		then: "the correct file is returned"
+			found 		!= null
+			found		== theFile
+		
+		and: "any calls to delegates are correctly made"
+			1 * gridfsHelperService.findOne(theFilename) >> theFile
+		
+	}
+
 }

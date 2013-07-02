@@ -30,5 +30,9 @@ class GridfsHelperService {
 	GridFSDBFile findOne(ObjectId oid) { 
 //		store.findOne(oid)
 	}
+	
+	GridFSDBFile findOne(String filename) { 
+//		store.findOne(filename)
+	}
 
 }

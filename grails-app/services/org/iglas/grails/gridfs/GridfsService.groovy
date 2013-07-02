@@ -112,7 +112,9 @@ class GridfsService {
         }
         gfsFiles
     }
+	// TODO change to instance method
     public static GridFSDBFile get(params) {
+		// TODO delegate according to parameters supplied
         def config = new UserConfig(configName).get(params)
         String FileName = params.filename
         GridFSDBFile fileForOutput
@@ -126,6 +128,16 @@ class GridfsService {
         }
         fileForOutput
     }
+	public GridFSDBFile getByFilename(filename) {
+		GridFSDBFile fileForOutput
+		try {
+			fileForOutput = gridfsHelperService.findOne(filename)
+		}catch (Exception e){
+			println(e.message)
+			fileForOutput = new GridFSDBFile()
+		}
+		fileForOutput
+	}
 	public GridFSDBFile getById(ObjectId oid) {
 		GridFSDBFile fileForOutput
 		try {
