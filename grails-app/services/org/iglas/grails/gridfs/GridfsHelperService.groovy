@@ -17,6 +17,9 @@ class GridfsHelperService {
 		try {
 			Mongo mongo = new Mongo(config.db.host)
 			DB db  = mongo.getDB(config.db.name)
+			if (config.db.username && config.db.password) {
+				db.authenticate(config.db.username, config.db.password as char[])
+			}
 			gfsFiles = new GridFS(db, config.db.collection )
 		}catch (Exception e){
 			println(e.message)
