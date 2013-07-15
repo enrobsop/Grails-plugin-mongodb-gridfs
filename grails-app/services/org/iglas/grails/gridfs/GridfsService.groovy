@@ -9,6 +9,7 @@ import com.mongodb.DB
 import com.mongodb.DBCollection
 import com.mongodb.DBObject
 import com.mongodb.Mongo
+import com.mongodb.MongoOptions;
 import com.mongodb.gridfs.GridFS
 import com.mongodb.gridfs.GridFSDBFile
 import com.mongodb.gridfs.GridFSInputFile
@@ -93,6 +94,9 @@ class GridfsService {
 	private def getGridFS(config) {
 		Mongo mongo = new Mongo(config.db.host)
 		DB db  = mongo.getDB(config.db.name)
+		if (config.db.username && config.db.password) {
+			db.authenticate(config.db.username, config.db.password as char[])
+		}
 		DBCollection col = db.getCollection(config.db.collection + ".files")
 		col.ensureIndex(new BasicDBObject(config.indexes))
 		new GridFS(db, config.db.collection)
