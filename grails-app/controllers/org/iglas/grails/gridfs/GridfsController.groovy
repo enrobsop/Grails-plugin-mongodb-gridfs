@@ -100,8 +100,8 @@ class GridfsController {
             }
 
         } else {
-            log.debug "Params  has errors - no filename"
-            flash.message = messageSource.getMessage("mongodb-gridfs.paramsbad", [params.filename] as Object[], "Params  has errors - missing filename", request.locale)
+            flash.message = g.message(error: command.errors.fieldError)
+			log.debug flash.message
             redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.id
         }
 

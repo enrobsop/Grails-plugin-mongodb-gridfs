@@ -232,8 +232,7 @@ class GridfsControllerSpec extends UnitSpec {
 			controller.get()
 		
 		then: "a flash messsage is created"
-			flash.message != null
-			flash.message =~ /(?i).*errors.*/
+			flash.message =~ /(?i).*filename.*null.*/
 		and: "is redirected to the error controller"
 			response.redirectedUrl == "/error/index/123"
 			
