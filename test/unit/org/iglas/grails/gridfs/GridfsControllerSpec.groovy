@@ -11,6 +11,7 @@ import org.springframework.web.multipart.MultipartFile
 import spock.lang.Shared
 import spock.lang.Unroll
 
+import com.mongodb.gridfs.GridFSDBFile
 import com.mongodb.gridfs.GridFSFile
 
 @TestFor(GridfsController)
@@ -219,7 +220,116 @@ class GridfsControllerSpec extends UnitSpec {
 			"forward"	| null					| "/grails/success/onupload.dispatch?fileId=51d319ca0364087b266e6f19"
 		
 	}
+	
+	def "error messages are given when a required parameter is missing"() {
+		
+		given: "a request with missing property"
+			params.filename	= null
+		and: "an id"
+			params.id = "123"
+		
+		when: "get file is invoked"
+			controller.get()
+		
+		then: "a flash messsage is created"
+			flash.message != null
+			flash.message =~ /(?i).*errors.*/
+		and: "is redirected to the error controller"
+			response.redirectedUrl == "/error/index/123"
+			
+	}
+	
+	def "can get a valid file when no access control is provided"() {
+		
+		given: "the correct parameters"
+			def theFilename = "myFile.txt"
+			params.filename = theFilename
+		and: "a file"
+			def theFile = Mock(GridFSDBFile)
+			theFile.getContentType() >> "image/jpeg"
+			theFile.getInputStream() >> new ByteArrayInputStream("the content...".bytes) 
+		
+		when: "get file is invoked"
+			controller.get()
+		
+		then: "calls the service correctly"
+			1 * gridfsService.getByFilename(theFilename) >> theFile
+		and: "returns the correct content"
+			response.status 			== 200
+			response.contentType		== "image/jpeg"
+			response.contentAsString	== "the content..."
+			
+	}
+	
+	def "getting a file behaves correctly when access is denied"() {
 
+		given: "a non-existent filename"
+			params.filename = "iDoNotExist.txt"
+		and: "an id"
+			params.id = 123
+			
+		when: "get file is invoked"
+			controller.get()
+			
+		then: "calls the service correctly"
+			1 * gridfsService.getByFilename("iDoNotExist.txt") >> null
+		and: "a flash messsage is created"
+			flash.message != null
+			flash.message =~ /(?i).*file.*not.*found.*/
+		and: "the client is redirected to the error controller"
+			response.redirectedUrl == "/error/index/123"
+					
+	}
+	
+	def "getting a file behaves correctly when access is permitted"() {
+	
+		given: "someone else's file"
+			params.filename = "notMy.jpg"
+			def theFile = Mock(GridFSDBFile)
+		and: "an id"
+			params.id = 123
+		and: "a custom access class"
+			configureWith([accessClass: "org.iglas.grails.gridfs.PreventAccess", accessMethod: "permits"])
+			
+		when: "get file is invoked"
+			
+			controller.get()
+			
+		then: "the service is called"
+			1 * gridfsService.getByFilename("notMy.jpg") >> theFile
+		and: "a flash messsage is created"
+			flash.message != null
+			flash.message =~ /(?i).*access.*(deny|denied).*/
+		and: "the client is redirected to the error controller"
+			response.redirectedUrl == "/access/denied/123"
+
+	}
+
+	def "getting a file behaves correctly when the file can be accessed"() {
+		
+		given: "my file"
+			params.filename = "my.jpg"
+			def theFile = Mock(GridFSDBFile)
+			theFile.getContentType() >> "image/jpeg"
+			theFile.getInputStream() >> new ByteArrayInputStream("the content...".bytes)
+		and: "an id"
+			params.id = 123
+		and: "a custom access class"
+			configureWith([accessClass: "org.iglas.grails.gridfs.AllowAccess", accessMethod: "permits"])
+
+		when: "get file is invoked"
+			controller.get()
+			
+		then: "calls the service correctly"
+			1 * gridfsService.getByFilename("my.jpg") >> theFile
+		and: "returns the correct content"
+			assert response.status 		== 200 
+			response.contentType		== "image/jpeg"
+			response.contentAsString	== "the content..."
+			
+	}
+	
+	
 	private def configureWith(options=[:]) {
 		def defaultConfig = [
 			allowedExtensions:	["jpg"],
@@ -228,8 +338,10 @@ class GridfsControllerSpec extends UnitSpec {
 				successController:	"home",
 				successAction:		"index",
 				errorController:	"error",
-				errorAction:		"index",
-			]
+				errorAction:		"index"
+			],
+			accessController:	"access",
+			accessAction:		"denied"
 		]
 		def config = defaultConfig << options 
 		
@@ -238,4 +350,16 @@ class GridfsControllerSpec extends UnitSpec {
 		controller.configHelper = configHelper
 	}
 	
+}
+
+class PreventAccess {
+	boolean permits(file, action) {
+		false
+	}
+}
+
+class AllowAccess {
+	boolean permits(file, action) {
+		true
+	}
 }

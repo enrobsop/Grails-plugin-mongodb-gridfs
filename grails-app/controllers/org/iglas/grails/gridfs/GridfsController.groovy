@@ -61,12 +61,12 @@ class GridfsController {
 
     }
     def get(params){
+    	def config = configHelper.getConfig(params)
         if(params?.filename){
-            def config = new UserConfig(GridfsService.configName).get(Gridfs.makeConfig(params))
+			def filename = params.filename
             try {
-                GridFSDBFile fileForOutput = GridfsService.get(params)
+                GridFSDBFile fileForOutput = gridfsService.getByFilename(filename)
 
-                if(fileForOutput)
                     if(fileForOutput){
                         def accessResult = true
                         if (config.accessClass && config.accessMethod ){
@@ -81,8 +81,8 @@ class GridfsController {
                         }
                         else
                         {
-                            log.debug "Access deny get:" + access.message
-                            flash.message = messageSource.getMessage("mongodb-gridfs.get.accessdeny", [access.message] as Object[], request.locale)
+                            log.debug "Access denied for 'get'"
+                            flash.message = messageSource.getMessage("mongodb-gridfs.get.accessdeny", ['get'] as Object[], "Access denied", request.locale)
                             redirect controller: config.accessController, action: config.accessAction, id: params.id
                         }
 
@@ -91,16 +91,17 @@ class GridfsController {
                     else
                     {
                         log.debug "File not found"
-                        flash.message = messageSource.getMessage("mongodb-gridfs.get.filenotfound", [params.idparent] as Object[], request.locale)
+                        flash.message = messageSource.getMessage("mongodb-gridfs.get.filenotfound", [params.idparent] as Object[], "The requested file ({0}) was not found in our system.", request.locale)
                         redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.id
                     }
             } catch (e){
-                def fileForOutput = false
+				e.printStackTrace()
+				log.error e
             }
 
         }else{
-            log.debug "Params  has errors"
-            flash.message = messageSource.getMessage("mongodb-gridfs.paramsbad", [params.idparent] as Object[], request.locale)
+            log.debug "Params  has errors - no filename"
+            flash.message = messageSource.getMessage("mongodb-gridfs.paramsbad", [params.filename] as Object[], "Params  has errors - missing filename", request.locale)
             redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.id
         }
 
