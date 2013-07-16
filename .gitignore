@@ -6,6 +6,7 @@
 UrlMappings.groovy
 /target
 /web-app
+plugin.xml
 
 # STS / Eclipse Files
 .classpath
