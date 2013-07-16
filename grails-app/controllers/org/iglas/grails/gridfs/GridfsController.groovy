@@ -60,10 +60,10 @@ class GridfsController {
         }
 
     }
-    def get(params){
+    def get(GetFileCommand command){
     	def config = configHelper.getConfig(params)
-        if(params?.filename){
-			def filename = params.filename
+        if(command.validate()){
+			def filename = command.filename
             try {
                 GridFSDBFile fileForOutput = gridfsService.getByFilename(filename)
 
@@ -99,7 +99,7 @@ class GridfsController {
 				log.error e
             }
 
-        }else{
+        } else {
             log.debug "Params  has errors - no filename"
             flash.message = messageSource.getMessage("mongodb-gridfs.paramsbad", [params.filename] as Object[], "Params  has errors - missing filename", request.locale)
             redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.id
