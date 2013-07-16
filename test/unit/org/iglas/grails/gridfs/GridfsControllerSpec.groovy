@@ -260,7 +260,7 @@ class GridfsControllerSpec extends UnitSpec {
 			
 	}
 	
-	def "getting a file behaves correctly when access is denied"() {
+	def "getting a file behaves correctly when the file cannot be found"() {
 
 		given: "a non-existent filename"
 			params.filename = "iDoNotExist.txt"
@@ -273,14 +273,14 @@ class GridfsControllerSpec extends UnitSpec {
 		then: "calls the service correctly"
 			1 * gridfsService.getByFilename("iDoNotExist.txt") >> null
 		and: "a flash messsage is created"
-			flash.message != null
 			flash.message =~ /(?i).*file.*not.*found.*/
+			flash.message =~ /(?i).*iDoNotExist\.txt.*/
 		and: "the client is redirected to the error controller"
 			response.redirectedUrl == "/error/index/123"
 					
 	}
 	
-	def "getting a file behaves correctly when access is permitted"() {
+	def "getting a file behaves correctly when access is denied"() {
 	
 		given: "someone else's file"
 			params.filename = "notMy.jpg"
@@ -304,7 +304,7 @@ class GridfsControllerSpec extends UnitSpec {
 
 	}
 
-	def "getting a file behaves correctly when the file can be accessed"() {
+	def "getting a file behaves correctly when access is permitted"() {
 		
 		given: "my file"
 			params.filename = "my.jpg"

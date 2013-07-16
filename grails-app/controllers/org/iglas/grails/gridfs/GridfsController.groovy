@@ -66,46 +66,45 @@ class GridfsController {
 			def filename = command.filename
             try {
                 GridFSDBFile fileForOutput = gridfsService.getByFilename(filename)
-
-                    if(fileForOutput){
-                        def accessResult = true
-                        if (config.accessClass && config.accessMethod ){
-                            def access = Class.forName(config.accessClass  ,true,Thread.currentThread().contextClassLoader).newInstance()
-                            accessResult = access."${config.accessMethod}"(fileForOutput,"get")
-                        }
-
-                        if (accessResult ){
-                            response.outputStream << fileForOutput.getInputStream()
-                            response.contentType = fileForOutput.getContentType()
-                            return
-                        }
-                        else
-                        {
-                            log.debug "Access denied for 'get'"
-                            flash.message = messageSource.getMessage("mongodb-gridfs.get.accessdeny", ['get'] as Object[], "Access denied", request.locale)
-                            redirect controller: config.accessController, action: config.accessAction, id: params.id
-                        }
-
-
+                if (fileForOutput) {
+                    def accessResult = true
+					if (isPermitted("get", fileForOutput, config)) {
+                        response.outputStream << fileForOutput.getInputStream()
+                        response.contentType = fileForOutput.getContentType()
+                        return
+                    } else {
+                        log.debug "Access denied for 'get'"
+                        flash.message = messageSource.getMessage("mongodb-gridfs.get.accessdeny", ['get'] as Object[], "Access denied", request.locale)
+                        redirect controller: config.accessController, action: config.accessAction, id: params.id
                     }
-                    else
-                    {
-                        log.debug "File not found"
-                        flash.message = messageSource.getMessage("mongodb-gridfs.get.filenotfound", [params.idparent] as Object[], "The requested file ({0}) was not found in our system.", request.locale)
-                        redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.id
-                    }
-            } catch (e){
+                } else {
+					handleFileNotFound(config)
+                }
+            } catch (e) {
 				e.printStackTrace()
 				log.error e
+				response.sendError(500)
+				return
             }
-
         } else {
             flash.message = g.message(error: command.errors.fieldError)
 			log.debug flash.message
             redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.id
         }
-
     }
+	private boolean isPermitted(action, resource, config) {
+		if (config.accessClass && config.accessMethod ){
+			def access = Class.forName(config.accessClass  ,true,Thread.currentThread().contextClassLoader).newInstance()
+			return access."${config.accessMethod}"(resource, action)
+		}
+		true
+	}
+	private void handleFileNotFound(config) {
+		log.debug "File not found"
+		flash.message = messageSource.getMessage("mongodb-gridfs.get.filenotfound", [params.filename] as Object[], "The requested file ({0}) was not found in our system.", request.locale)
+		redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.id
+	}
+	
     def remove(params){
         String rmFileName = params.filename
         def config = new UserConfig(GridfsService.configName).get(Gridfs.makeConfig(params))
