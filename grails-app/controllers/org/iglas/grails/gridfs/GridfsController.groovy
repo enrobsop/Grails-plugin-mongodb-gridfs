@@ -1,16 +1,15 @@
 package org.iglas.grails.gridfs
 
+import org.bson.types.ObjectId
 import org.iglas.grails.utils.*
 
-import com.mongodb.BasicDBObject
-import com.mongodb.DBObject
 import com.mongodb.gridfs.GridFSDBFile
-import com.mongodb.gridfs.GridFSInputFile
 
 class GridfsController {
 
 	def configHelper = new ConfigHelper()  // for easier testing
 	def gridfsService
+	def utilsService
     def messageSource
     def defaultAction = "list"
 	
@@ -92,6 +91,20 @@ class GridfsController {
             redirect controller: config.controllers.errorController, action: config.controllers.errorAction, id: params.id
         }
     }
+	def showIcon() {
+		def imgSrc
+		if (params.id) {
+			def oid = new ObjectId(params.id)
+			imgSrc = utilsService.getIconForFile(oid,[width:params.width,height:params.height])
+		} else if (params.filename) {
+			imgSrc = utilsService.getIconForFile(attrs.filename,[width:params.width,height:params.height])
+		}
+		
+		def icon = imgSrc?.icon
+		
+		response.contentType = "image/jpg"
+		response.outputStream << new FileInputStream(icon)
+	}
 	private boolean isPermitted(action, resource, config) {
 		if (config.accessClass && config.accessMethod ){
 			def access = Class.forName(config.accessClass  ,true,Thread.currentThread().contextClassLoader).newInstance()
