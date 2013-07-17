@@ -31,6 +31,15 @@ class GridfsTagLib {
             out << ' title="${attrs?.title}" '
         out << ' />'
     }
+	def thumb = { attrs ->
+		Integer width	= attrs.width.toInteger()
+		Integer height	= attrs.height.toInteger()
+		String 	fileId 	= attrs.fileId
+		String 	alt  	 = attrs.alt
+		def props = [width: width, height: height]
+		
+		out << g.img(uri: "/thumb/$fileId/$width/$height", alt: alt)
+	}
     def createLink = { attrs ->
         out << g.createLink(controller: "gridfs",action:"get" ,params: [filename:attrs.filename] )
     }
