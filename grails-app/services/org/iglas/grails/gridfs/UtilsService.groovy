@@ -23,58 +23,94 @@ class UtilsService {
     UtilsService(){
         grailsLinkGenerator = grailsApplication?.mainContext?.getBean("grailsLinkGenerator")
     }
-	String getIconForFile(ObjectId oid, def params=[:]) {
+	def getIconForFile(ObjectId oid, def params=[:]) {
 		getIconForFile(gridfsService.getById(oid),params)
 	}
-    String getIconForFile(String filename,def params=[:]){
+    def getIconForFile(String filename,def params=[:]){
         getIconForFile(GridfsService.get(filename: filename),params)
     }
-    public String getIconForFile(GridFSFile file,def params=[:]){
+    public def getIconForFile(GridFSFile file,def params=[:]){
     	def config = configHelper.getConfig(params)
-        String iconDir = config.iconsdir.toLowerCase()
-        List imagesType = config.imagestype
-        Map thumbConfig = config.thumbconfig
-
-        String prefix  = ""
-        if(new File("web-app/").isDirectory())
-            prefix  =  "web-app/"
-
-        DBObject metadata = file.getMetaData()
-        String idparent = metadata.idparent
-        String thumbdir = thumbConfig.publicdir.toLowerCase()
-        thumbdir = thumbdir.replaceAll(/\[idparent\]/,idparent)
-        new File(prefix + thumbdir).mkdirs()
-        String icon  = grailsLinkGenerator.resource(file: config.defaulticon)
-
-        if(metadata?.fileExtension?.toLowerCase() in imagesType){
-
-            if(!new File(prefix + thumbdir +"/"+metadata.originalFilename.toLowerCase()).isFile())
-            {
-                String tmpfile  = config.tmpdir + "/" + file.filename
-
-                new File(prefix + config.tmpdir).mkdirs()
-                GridFSDBFile fileForTmp
-                fileForTmp = gridfsService.getByFilename(file.filename)
-
-                if(fileForTmp !=  null) {
-                    if(!new File(prefix + tmpfile).isFile())
-                        fileForTmp.writeTo(prefix + tmpfile)
-                    String filenameForBurn =thumbConfig.x_size +"x" + thumbConfig.y_size + metadata.originalFilename.substring(0,metadata.originalFilename.lastIndexOf('.'))
-                    burningImageService.doWith(prefix + tmpfile,prefix + thumbdir)
-                            .execute (filenameForBurn.toLowerCase(), {
-                        it.scaleAccurate(thumbConfig.x_size, thumbConfig.y_size)
-                    })
-
-                }
-            }
-            icon  = grailsLinkGenerator.resource([dir:  thumbdir , file: thumbConfig.x_size +"x" + thumbConfig.y_size + metadata.originalFilename.toLowerCase()])
-        }else {
-            def iconFile = getFilePathForExtension(iconDir,metadata.fileExtension.toLowerCase())
-            if (iconFile)
-                icon = grailsLinkGenerator.resource([dir: iconDir , file: iconFile])
+		
+    	def iconProperties
+		def icon
+		
+        DBObject metadata 		= file.getMetaData()
+		def fileExtension 		= metadata.fileExtension.toLowerCase()
+		def originalFilename	= metadata.originalFilename.toLowerCase()
+		def idparent 			= metadata.idparent
+		
+		Map thumbConfig		= config.thumbconfig
+		def thumbWidth		= (params.width  ?: thumbConfig.x_size) as int
+		def thumbHeight		= (params.height ?: thumbConfig.y_size) as int
+		def thumbFilename	= getThumbnailName(originalFilename, thumbWidth, thumbHeight)
+		
+		def publicPath	= thumbConfig.publicdir.toLowerCase().replaceAll(/\[idparent\]/,idparent)
+		def tmpDir 		= initDir(config.tmpdir)	
+		def thumbDir 	= initDir(publicPath)
+		
+        if(isImageType(fileExtension, config)){
+			initThumbnail(file, tmpDir, thumbDir, thumbFilename, thumbWidth, thumbHeight)
+			iconProperties	= [dir:  publicPath , file: "$thumbFilename.$fileExtension"]
+			icon			= new File(thumbDir, "$thumbFilename.$fileExtension")
+        } else {
+			iconProperties	= getIconFor(fileExtension, config)
         }
-        icon
+
+		iconProperties = iconProperties ?: [file: config.defaulticon]
+		[
+			link:	grailsLinkGenerator.resource(iconProperties),
+			icon:	icon ?: new File(iconProperties.dir as String, iconProperties.file as String)
+		]
+        
     }
+	
+	private void initThumbnail(file, tmpDir, thumbDir, thumbFilename, width, height) {
+		if(!new File(thumbDir, thumbFilename).isFile()) {
+			def srcImage = materializeToFilesystem(file, tmpDir).path
+			makeThumbnail(srcImage, thumbDir, thumbFilename, width, height);
+		}
+	}
+	
+	private def getIconFor(fileExtension, config) {
+		String iconDir	= config.iconsdir.toLowerCase()
+		def iconFile	= getFilePathForExtension(iconDir,fileExtension)
+		[dir: iconDir , file: iconFile]
+	}
+	
+	def getPrefix() {
+		new File("web-app/").isDirectory() ? "web-app/" : ""
+	}
+	
+	def initDir(path) {
+		def dir = new File(prefix + path) 
+		dir.mkdirs()
+		dir.path
+	}
+	
+	private makeThumbnail(inputImagePath, thumbDirPath, outputFilename, width, height) {
+		burningImageService.doWith(inputImagePath, thumbDirPath).execute(outputFilename, {
+			it.scaleAccurate(width, height)
+		})
+	}
+	
+	private boolean isImageType(extension, config) {
+		extension in config.imagestype
+	}
+	
+	private def materializeToFilesystem(GridFSDBFile dbFile, String dirPath) {
+		def materializedFile = new File(dirPath, dbFile.filename)
+		if(!materializedFile.isFile()) {
+			dbFile.writeTo(materializedFile)
+		}
+		materializedFile
+	}
+	
+	def getThumbnailName(String originalFilename, width, height) {
+		def cleaned = originalFilename.trim().toLowerCase()  
+		"${width}x${height}" + cleaned.substring(0,cleaned.lastIndexOf('.'))
+	}
+	
     static getFilePathForExtension(String dir,String extension){
 
         def iconConfigFile = new File(dir + "/iconconfig.groovy")

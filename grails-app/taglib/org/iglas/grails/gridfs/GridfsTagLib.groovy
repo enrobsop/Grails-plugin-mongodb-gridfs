@@ -26,7 +26,7 @@ class GridfsTagLib {
 		} else if (attrs.filename) {
 			imgSrc = utilsService.getIconForFile(attrs.filename,[thumbconfig:[x_size:x,y_size:y]])
 		}
-        out << "<img src=\"$imgSrc\"" 
+        out << "<img src=\"${imgSrc.link}\"" 
         if (attrs?.title)
             out << ' title="${attrs?.title}" '
         out << ' />'
