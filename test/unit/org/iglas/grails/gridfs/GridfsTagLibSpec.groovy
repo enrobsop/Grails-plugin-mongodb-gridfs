@@ -59,7 +59,7 @@ class GridfsTagLibSpec extends UnitSpec {
 			def html = applyTemplate(theTagHtml)
 		
 		then: "the correct calls are made"
-			1 * utilsService.getIconForFile(theId, [thumbconfig:[x_size:theWidth,y_size:theHeight]]) >> theExpectedPath
+			1 * utilsService.getIconForFile(theId, [thumbconfig:[x_size:theWidth,y_size:theHeight]]) >> [link:theExpectedPath]
 			0 * utilsService.getIconForFile(_ as String, _)
 		and: "the correct html is created"
 			html.contains("src=\"$theExpectedPath\"")
@@ -80,7 +80,7 @@ class GridfsTagLibSpec extends UnitSpec {
 			def html = applyTemplate(theTagHtml)
 		
 		then: "the correct calls are made"
-			1 * utilsService.getIconForFile(theFilename, [thumbconfig:[x_size:theWidth,y_size:theHeight]]) >> theExpectedPath
+			1 * utilsService.getIconForFile(theFilename, [thumbconfig:[x_size:theWidth,y_size:theHeight]]) >> [link:theExpectedPath]
 			0 * utilsService.getIconForFile(_ as ObjectId, _) >> theExpectedPath
 		and: "the correct html is created"
 			html.contains("src=\"$theExpectedPath\"")
