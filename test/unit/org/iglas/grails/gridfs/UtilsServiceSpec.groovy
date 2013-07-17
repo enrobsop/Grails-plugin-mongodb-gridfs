@@ -122,7 +122,9 @@ class UtilsServiceSpec extends UnitSpec {
 			imagestype:			["jpg", "JPG", "jpeg", "JPEG", "png", "gif"],
 			iconsdir:			"myIcons",
 			thumbconfig:		[
-				publicdir:	"public"
+				publicdir:	"public",
+				x_size:		128,
+				y_size:		128
 			]
 		]
 		def config = defaultConfig << options

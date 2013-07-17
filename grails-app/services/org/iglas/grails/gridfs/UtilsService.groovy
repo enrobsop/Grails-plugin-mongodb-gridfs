@@ -41,11 +41,11 @@ class UtilsService {
 		def idparent 			= metadata.idparent
 		
 		Map thumbConfig		= config.thumbconfig
-		def thumbWidth		= (params.width  ?: thumbConfig.x_size) as int
-		def thumbHeight		= (params.height ?: thumbConfig.y_size) as int
+		def thumbWidth		= new Integer(params.width  ?: thumbConfig.x_size)
+		def thumbHeight		= new Integer(params.height ?: thumbConfig.y_size)
 		def thumbFilename	= getThumbnailName(originalFilename, thumbWidth, thumbHeight)
 		
-		def publicPath	= thumbConfig.publicdir.toLowerCase().replaceAll(/\[idparent\]/,idparent)
+		def publicPath	= thumbConfig.publicdir.replaceAll(/\[idparent\]/,idparent)
 		def tmpDir 		= initDir(config.tmpdir)	
 		def thumbDir 	= initDir(publicPath)
 		
@@ -83,7 +83,7 @@ class UtilsService {
 	}
 	
 	def initDir(path) {
-		def dir = new File(prefix + path) 
+		def dir = new File( (path ==~ /[\/~].*/) ? path : prefix + path) 
 		dir.mkdirs()
 		dir.path
 	}
