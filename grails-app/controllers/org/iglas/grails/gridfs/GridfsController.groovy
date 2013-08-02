@@ -94,8 +94,8 @@ class GridfsController {
 	def showIcon() {
 		def imgSrc
 		if (params.id) {
-			def oid = new ObjectId(params.id)
-			imgSrc = utilsService.getIconForFile(oid,[width:params.width,height:params.height])
+			ObjectId oid = new ObjectId(params.id)
+			imgSrc = utilsService.getIconForFile(oid,[width:params.width,height:params.height])			
 		} else if (params.filename) {
 			imgSrc = utilsService.getIconForFile(attrs.filename,[width:params.width,height:params.height])
 		}

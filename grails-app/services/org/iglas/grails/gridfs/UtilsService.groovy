@@ -24,10 +24,10 @@ class UtilsService {
         grailsLinkGenerator = grailsApplication?.mainContext?.getBean("grailsLinkGenerator")
     }
 	def getIconForFile(ObjectId oid, def params=[:]) {
-		getIconForFile(gridfsService.getById(oid),params)
+		getIconForFile((GridFSFile) gridfsService.getById(oid),params)
 	}
     def getIconForFile(String filename,def params=[:]){
-        getIconForFile(GridfsService.get(filename: filename),params)
+        getIconForFile((GridFSFile) GridfsService.get(filename: filename),params)
     }
     public def getIconForFile(GridFSFile file,def params=[:]){
     	def config = configHelper.getConfig(params)
